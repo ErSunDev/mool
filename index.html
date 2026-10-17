@@ -118,6 +118,35 @@
   #cowCountNum{color:#8ef0a8;font-weight:700;font-size:13px;
     text-shadow:0 0 10px rgba(142,240,168,.6);margin-left:6px;}
 
+  /* Jump button */
+  #jumpBtn{
+    position:fixed;
+    bottom:106px;right:22px;
+    width:74px;height:74px;
+    border-radius:50%;
+    background:radial-gradient(circle at 32% 28%, rgba(180,255,200,.35), rgba(60,180,100,.45));
+    border:2px solid rgba(142,240,168,.75);
+    color:#eafff0;
+    font-size:11px;letter-spacing:.16em;font-weight:700;
+    text-transform:uppercase;
+    cursor:pointer;
+    z-index:16;
+    pointer-events:auto;
+    display:none;
+    align-items:center;justify-content:center;
+    transition: transform .1s, box-shadow .15s, background .15s;
+    box-shadow: 0 0 22px rgba(142,240,168,.32), inset 0 1px 0 rgba(255,255,255,.12);
+    touch-action: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #jumpBtn.on{display:flex;}
+  #jumpBtn.pressed, #jumpBtn:active{
+    transform: scale(.9);
+    box-shadow: 0 0 50px rgba(142,240,168,.85), inset 0 1px 0 rgba(255,255,255,.2);
+    background:radial-gradient(circle at 32% 28%, rgba(200,255,220,.7), rgba(80,220,130,.6));
+  }
+
   #fpsDisplay{
     position:fixed;
     top:26px;right:76px;
@@ -479,10 +508,12 @@
     <div><b>MOUSE</b> — Look</div>
     <div><b>SHIFT</b> — Sprint</div>
     <div><b>CTRL / C</b> — Crouch</div>
+    <div><b>SPACE</b> — Jump</div>
     <div><b>ESC</b> — Release cursor</div>
   </div>
 </div>
 
+<button id="jumpBtn">JUMP</button>
 <div id="toast">Cow caught!</div>
 <div id="fpsDisplay">60 FPS</div>
 <button id="settingsBtn" title="Graphics Settings">⚙</button>
@@ -1316,7 +1347,7 @@ function createCow(){
   let walkPhase = 0;
   return {
     group: root,
-    update(dt, speed, crouchT, t){
+    update(dt, speed, crouchT, t, jumpT = 0, vy = 0){
       const hipY = THREE.MathUtils.lerp(1.0, 0.54, crouchT);
       body.position.y = hipY + 0.46;
       for (const g of legs){
@@ -1331,13 +1362,24 @@ function createCow(){
       legs[3].rotation.x =  swing * amp;
       legs[1].rotation.x = -swing * amp;
       legs[2].rotation.x = -swing * amp;
+
+      // Tuck legs during jump for a natural leaping pose
+      if (jumpT > 0.05){
+        const tuck = clamp(Math.abs(vy) * 0.10 + jumpT * 0.4, 0, 0.75);
+        legs[0].rotation.x += tuck * 0.55;
+        legs[1].rotation.x += tuck * 0.55;
+        legs[2].rotation.x -= tuck * 0.45;
+        legs[3].rotation.x -= tuck * 0.45;
+      }
+
       body.position.y += Math.abs(Math.sin(walkPhase)) * 0.045 * moveAmt;
       body.rotation.z = Math.sin(walkPhase) * 0.035 * moveAmt;
-      body.rotation.x = -moveAmt * 0.045;
+      body.rotation.x = -moveAmt * 0.045 - jumpT * 0.08;
       const idle = (1 - moveAmt);
       head.rotation.x = Math.sin(walkPhase * 2) * 0.05 * moveAmt
                       + Math.sin(t * 0.9) * 0.05 * idle
-                      + crouchT * 0.18;
+                      + crouchT * 0.18
+                      - jumpT * 0.15;
       head.rotation.z = Math.sin(walkPhase) * 0.06 * moveAmt;
       tail.rotation.z = Math.sin(t * 2.6) * 0.28 + Math.sin(walkPhase) * 0.12;
       tail.rotation.x = Math.sin(t * 1.7) * 0.12;
@@ -1520,8 +1562,14 @@ const player = {
   stamina: 100,
   health: 100,
   alive: true,
-  lastDamage: -99
+  lastDamage: -99,
+  vy: 0,
+  grounded: true,
+  jumpHeldLast: false,
 };
+
+const GRAVITY = -22.0;
+const JUMP_VELOCITY = 7.0;
 
 const cow = createCow();
 cow.group.position.copy(player.pos);
@@ -1529,22 +1577,44 @@ cow.group.rotation.y = player.yaw;
 scene.add(cow.group);
 
 /* =====================================================================
+   JUMP BUTTON HANDLER
+   ===================================================================== */
+const jumpBtn = document.getElementById('jumpBtn');
+let jumpBtnHeld = false;
+let jumpBtnPulseTimer = null;
+
+function pulseJumpBtn(){
+  jumpBtn.classList.add('pressed');
+  clearTimeout(jumpBtnPulseTimer);
+  jumpBtnPulseTimer = setTimeout(() => jumpBtn.classList.remove('pressed'), 130);
+}
+
+jumpBtn.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  jumpBtnHeld = true;
+  pulseJumpBtn();
+});
+jumpBtn.addEventListener('pointerup', () => { jumpBtnHeld = false; });
+jumpBtn.addEventListener('pointerleave', () => { jumpBtnHeld = false; });
+jumpBtn.addEventListener('pointercancel', () => { jumpBtnHeld = false; });
+// Prevent context menu on long-press (mobile)
+jumpBtn.addEventListener('contextmenu', e => e.preventDefault());
+
+/* =====================================================================
    GAME MODE + MULTIPLAYER STATE
    ===================================================================== */
-let gameMode = 'single';           // 'single' | 'multi'
+let gameMode = 'single';
 let multiConfig = { bears: 2, cows: 3 };
 
-const hunters = [];                // [{ bear, data }]
-const aiCows  = [];                // [{ cow, pos, yaw, state, wanderTarget, wanderTimer, crouchT, health, alive, inBush }]
+const hunters = [];
+const aiCows  = [];
 
-/* ---- create a single hunter ---- */
 function createHunter(startPos, startRot){
   const bear = createBear();
   bear.group.position.copy(startPos);
   bear.group.rotation.y = startRot || 0;
   scene.add(bear.group);
 
-  // Give each bear a slightly offset waypoint loop so they don't overlap
   const ox = rr(-5, 5);
   const oz = rr(-5, 5);
   const waypoints = [
@@ -1577,12 +1647,10 @@ function createHunter(startPos, startRot){
   };
 }
 
-/* ---- create a single AI cow ---- */
 function createAICow(startPos){
   const c = createCow();
   c.group.position.copy(startPos);
   c.group.rotation.y = Math.random() * Math.PI * 2;
-  // Distinct tint so AI cows read as "other players" and not duplicates of you
   c.group.traverse(obj => {
     if (obj.isMesh && obj.material && obj.material.color && obj.material.color.getHex() === 0xf4f1e6){
       obj.material = obj.material.clone();
@@ -1605,7 +1673,6 @@ function createAICow(startPos){
   };
 }
 
-/* ---- clear all hunters and AI cows ---- */
 function clearActors(){
   for (const h of hunters) scene.remove(h.bear.group);
   for (const a of aiCows)  scene.remove(a.cow.group);
@@ -1613,14 +1680,12 @@ function clearActors(){
   aiCows.length = 0;
 }
 
-/* ---- spawn actors according to gameMode/multiConfig ---- */
 function spawnActors(){
   clearActors();
 
   const numBears = (gameMode === 'multi') ? multiConfig.bears : 1;
   const numAI    = (gameMode === 'multi') ? (multiConfig.cows - 1) : 0;
 
-  // Hunter spawn positions: spread across the map
   const hunterSpawns = [
     new THREE.Vector3(-18, 0,  18),
     new THREE.Vector3( 18, 0,  18),
@@ -1634,13 +1699,10 @@ function spawnActors(){
       pos.x += rr(-8, 8);
       pos.z += rr(-8, 8);
     }
-    // Face roughly toward the map center so the player sees the silhouette
     const rot = Math.atan2(-pos.x, -pos.z);
     hunters.push(createHunter(pos, rot));
   }
 
-  // AI cows: scatter them near the player spawn so the player
-  // immediately sees "teammates" at the start
   for (let i = 0; i < numAI; i++){
     let pos;
     let tries = 0;
@@ -1660,7 +1722,6 @@ function spawnActors(){
     aiCows.push(createAICow(pos));
   }
 
-  // Update HUD counter
   updateCowCounter();
 }
 
@@ -1777,6 +1838,7 @@ const keys = {};
 window.addEventListener('keydown', e => {
   keys[e.code] = true;
   if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+  if (e.code === 'Space' && gameState === 'playing') pulseJumpBtn();
   if (e.code === 'Escape'){
     if (settingsOpen) closeSettings();
     else if (multiOpen) closeMultiMenu();
@@ -1828,7 +1890,8 @@ const ui = {
   multiOverlay: document.getElementById('multiOverlay'),
   cowCounter: document.getElementById('cowCounter'),
   cowCountNum: document.getElementById('cowCountNum'),
-  toast: document.getElementById('toast')
+  toast: document.getElementById('toast'),
+  jumpBtn: jumpBtn,
 };
 
 let toastTimer = null;
@@ -1887,6 +1950,9 @@ function resetPlayer(){
   player.stamina = 100;
   player.health = 100;
   player.alive = true;
+  player.vy = 0;
+  player.grounded = true;
+  player.jumpHeldLast = false;
   cow.group.position.copy(player.pos);
   cow.group.rotation.y = player.yaw;
   cow.group.visible = true;
@@ -1938,9 +2004,7 @@ function closeMultiMenu(){
       const p = renderer.domElement.requestPointerLock();
       if (p && p.catch) p.catch(() => {});
     } catch (e) {}
-  } else if (gameState === 'menu'){
-    ui.overlay.classList.remove('hidden');
-  } else if (gameState === 'won' || gameState === 'lost'){
+  } else if (gameState === 'menu' || gameState === 'won' || gameState === 'lost'){
     ui.overlay.classList.remove('hidden');
   }
 }
@@ -1960,8 +2024,6 @@ const numCowsValEl  = document.getElementById('numCowsVal');
 
 numBearsEl.addEventListener('input', () => {
   numBearsValEl.textContent = numBearsEl.value;
-  // Cows must always be at least 1 more than bears-1 for the player to have a chance
-  // Actually just enforce cows >= 2 (player + 1 AI)
   const minCows = 2;
   if (parseInt(numCowsEl.value) < minCows){
     numCowsEl.value = minCows;
@@ -1979,10 +2041,11 @@ document.getElementById('startMulti').addEventListener('click', () => {
 });
 
 /* =====================================================================
-   PLAYER UPDATE
+   PLAYER UPDATE — with jump physics
    ===================================================================== */
 function updatePlayer(dt, t){
   if (!player.alive) return;
+
   const wantCrouch = !!(keys['ControlLeft'] || keys['ControlRight'] || keys['KeyC']);
   player.crouching = wantCrouch;
   player.crouchT = THREE.MathUtils.damp(player.crouchT, wantCrouch ? 1 : 0, 9, dt);
@@ -2012,6 +2075,27 @@ function updatePlayer(dt, t){
     player.stamina = Math.min(100, player.stamina + (wantCrouch ? 12 : 16) * dt);
   }
 
+  // ---- JUMP ----
+  const jumpInput = (keys['Space'] || jumpBtnHeld);
+  const jumpEdge = jumpInput && !player.jumpHeldLast;
+  if (jumpEdge && player.grounded && !wantCrouch){
+    player.vy = JUMP_VELOCITY;
+    player.grounded = false;
+    pulseJumpBtn();
+  }
+  player.jumpHeldLast = jumpInput;
+
+  // Gravity
+  if (!player.grounded || player.pos.y > 0){
+    player.vy += GRAVITY * dt;
+    player.pos.y += player.vy * dt;
+    if (player.pos.y <= 0){
+      player.pos.y = 0;
+      player.vy = 0;
+      player.grounded = true;
+    }
+  }
+
   if (moving){
     player.pos.addScaledVector(move, speed * dt);
     resolveCollisions(player.pos, 0.85);
@@ -2027,7 +2111,7 @@ function updatePlayer(dt, t){
 
   cow.group.position.copy(player.pos);
   cow.group.rotation.y = player.yaw;
-  cow.update(dt, moving ? speed : 0, player.crouchT, t);
+  cow.update(dt, moving ? speed : 0, player.crouchT, t, player.pos.y, player.vy);
 
   if (Math.hypot(player.pos.x - EXIT.x, player.pos.z - EXIT.z) < 4.0){
     endGame(true);
@@ -2035,12 +2119,11 @@ function updatePlayer(dt, t){
 }
 
 /* =====================================================================
-   AI COW UPDATE — flee from nearest hunter, otherwise wander
+   AI COW UPDATE
    ===================================================================== */
 function updateAICow(ai, dt, t){
   if (!ai.alive) return;
 
-  // Find nearest hunter
   let nearest = null;
   let nearestDist = Infinity;
   for (const h of hunters){
@@ -2049,7 +2132,6 @@ function updateAICow(ai, dt, t){
   }
 
   if (nearest && nearestDist < 15){
-    // Flee directly away from nearest hunter
     const ax = ai.pos.x - nearest.bear.group.position.x;
     const az = ai.pos.z - nearest.bear.group.position.z;
     const len = Math.hypot(ax, az) || 1;
@@ -2062,14 +2144,12 @@ function updateAICow(ai, dt, t){
     ai.wanderTarget = null;
     ai.wanderTimer = 0;
   } else {
-    // Wander
     ai.wanderTimer -= dt;
     if (ai.wanderTimer <= 0 || !ai.wanderTarget){
       ai.wanderTimer = rr(3, 7);
       ai.wanderTarget = new THREE.Vector3(
         rr(-WORLD + 6, WORLD - 6), 0, rr(-WORLD + 6, WORLD - 6)
       );
-      // 35% chance to crouch when picking a new target
       ai.crouchT = THREE.MathUtils.damp(ai.crouchT, rnd() < 0.35 ? 1 : 0, 9, dt);
     }
     if (ai.wanderTarget){
@@ -2086,25 +2166,21 @@ function updateAICow(ai, dt, t){
     }
   }
 
-  // Collide with world
   resolveCollisions(ai.pos, 0.85);
 
-  // Bush check
   ai.inBush = false;
   for (const b of bushes){
     const dx = ai.pos.x - b.x, dz = ai.pos.z - b.z;
     if (dx*dx + dz*dz < b.r*b.r){ ai.inBush = true; break; }
   }
 
-  // Apply to model
   ai.cow.group.position.copy(ai.pos);
   ai.cow.group.rotation.y = ai.yaw;
-  cow.group.visible = true; // ensure visible logic doesn't accidentally hide
-  ai.cow.update(dt, ai.state === 'flee' ? 5.0 : 2.0, ai.crouchT, t);
+  ai.cow.update(dt, ai.state === 'flee' ? 5.0 : 2.0, ai.crouchT, t, 0, 0);
 }
 
 /* =====================================================================
-   HUNTER UPDATE — one hunter's AI
+   HUNTER UPDATE
    ===================================================================== */
 function updateHunterAI(hunterObj, dt, t){
   const h = hunterObj.data;
@@ -2112,12 +2188,9 @@ function updateHunterAI(hunterObj, dt, t){
   const hx = bear.group.position.x;
   const hz = bear.group.position.z;
 
-  // Determine best target cow (player or AI) that this bear can see
   let bestTarget = null;
   let bestDist = Infinity;
-  let bestIsPlayer = false;
 
-  // Player
   if (player.alive){
     const dx = player.pos.x - hx, dz = player.pos.z - hz;
     const d = Math.hypot(dx, dz);
@@ -2130,14 +2203,13 @@ function updateHunterAI(hunterObj, dt, t){
         const halfFov = THREE.MathUtils.degToRad(h.fov * 0.5);
         if (ang < halfFov || d < 3.5){
           if (hasLOS(hx, hz, player.pos.x, player.pos.z)){
-            if (d < bestDist){ bestDist = d; bestTarget = { pos: player.pos, isPlayer: true, crouchT: player.crouchT, inBush: player.inBush }; bestIsPlayer = true; }
+            if (d < bestDist){ bestDist = d; bestTarget = { pos: player.pos, isPlayer: true, crouchT: player.crouchT, inBush: player.inBush }; }
           }
         }
       }
     }
   }
 
-  // AI cows
   for (const ai of aiCows){
     if (!ai.alive) continue;
     const dx = ai.pos.x - hx, dz = ai.pos.z - hz;
@@ -2151,20 +2223,18 @@ function updateHunterAI(hunterObj, dt, t){
     const halfFov = THREE.MathUtils.degToRad(h.fov * 0.5);
     if (ang < halfFov || d < 3.5){
       if (hasLOS(hx, hz, ai.pos.x, ai.pos.z)){
-        if (d < bestDist){ bestDist = d; bestTarget = { pos: ai.pos, isPlayer: false, crouchT: ai.crouchT, inBush: ai.inBush, ai }; bestIsPlayer = false; }
+        if (d < bestDist){ bestDist = d; bestTarget = { pos: ai.pos, isPlayer: false, crouchT: ai.crouchT, inBush: ai.inBush, ai }; }
       }
     }
   }
 
   const sees = !!bestTarget;
 
-  // Update detection meter
   if (sees){
     let mult = 1.0;
     if (bestTarget.inBush) mult *= (bestTarget.crouchT > 0.5 ? 0.13 : 0.48);
     else if (bestTarget.crouchT > 0.5) mult *= 0.58;
     mult *= clamp(1.55 - bestDist / h.viewRange, 0.18, 1.0);
-
     h.detect = Math.min(1, h.detect + 1.45 * mult * dt);
     h.lastSeen = t;
     h.lastKnown.copy(bestTarget.pos);
@@ -2172,7 +2242,6 @@ function updateHunterAI(hunterObj, dt, t){
     h.detect = Math.max(0, h.detect - 0.55 * dt);
   }
 
-  // State machine
   if (h.detect >= 1){
     if (h.state !== 'chase') h.state = 'chase';
   } else if (h.state === 'chase'){
@@ -2186,7 +2255,6 @@ function updateHunterAI(hunterObj, dt, t){
     if (h.searchTimer <= 0) h.state = 'patrol';
   }
 
-  // Behaviour
   let desired = new THREE.Vector3();
   let moveSpeed = 0;
   let faceTarget = null;
@@ -2236,7 +2304,6 @@ function updateHunterAI(hunterObj, dt, t){
     faceTarget = Math.atan2(desired.x, desired.z);
   }
 
-  // Apply movement
   const p = bear.group.position;
   if (moveSpeed > 0 && desired.lengthSq() > 0){
     p.x += desired.x * moveSpeed * dt;
@@ -2250,7 +2317,7 @@ function updateHunterAI(hunterObj, dt, t){
 }
 
 /* =====================================================================
-   SHOOTING
+   SHOOTING — accounts for target's jump height
    ===================================================================== */
 function shootAtTarget(hunterObj, targetPos, targetCrouchT){
   const bear = hunterObj.bear;
@@ -2258,7 +2325,8 @@ function shootAtTarget(hunterObj, targetPos, targetCrouchT){
   bear.muzzle.getWorldPosition(origin);
 
   const target = targetPos.clone();
-  target.y = 1.05 - targetCrouchT * 0.35;
+  // targetPos.y is the jump offset (0 for AI cows, jumpY for player)
+  target.y = targetPos.y + 1.05 - targetCrouchT * 0.35;
 
   const dir = target.sub(origin).normalize();
   const spread = 0.030;
@@ -2287,11 +2355,11 @@ function updateProjectiles(dt){
     const newPos = b.mesh.position;
     let dead = b.life <= 0;
 
-    // Hit player?
+    // Player hit — includes jump height
     if (!dead && player.alive){
       const center = new THREE.Vector3(
         player.pos.x,
-        1.0 - player.crouchT * 0.35,
+        player.pos.y + 1.0 - player.crouchT * 0.35,
         player.pos.z
       );
       if (segmentSphere(oldPos, newPos, center, 0.95)){
@@ -2300,13 +2368,13 @@ function updateProjectiles(dt){
       }
     }
 
-    // Hit AI cow?
+    // AI cow hit
     if (!dead){
       for (const ai of aiCows){
         if (!ai.alive) continue;
         const center = new THREE.Vector3(
           ai.pos.x,
-          1.0 - ai.crouchT * 0.35,
+          ai.pos.y + 1.0 - ai.crouchT * 0.35,
           ai.pos.z
         );
         if (segmentSphere(oldPos, newPos, center, 0.95)){
@@ -2323,7 +2391,6 @@ function updateProjectiles(dt){
       }
     }
 
-    // Hit obstacle
     if (!dead){
       const bx = newPos.x, bz = newPos.z;
       for (let j=0;j<obstacles.length;j++){
@@ -2352,14 +2419,14 @@ function damagePlayer(amount){
 }
 
 /* =====================================================================
-   CAMERA UPDATE
+   CAMERA UPDATE — follows jump height
    ===================================================================== */
 function updateCamera(dt){
   const cp = Math.cos(cam.pitch);
   const sp = Math.sin(cam.pitch);
   const focus = new THREE.Vector3(
     player.pos.x,
-    THREE.MathUtils.lerp(1.55, 1.05, player.crouchT),
+    THREE.MathUtils.lerp(1.55, 1.05, player.crouchT) + player.pos.y,
     player.pos.z
   );
   const offset = new THREE.Vector3(
@@ -2397,7 +2464,7 @@ function updateSun(){
 }
 
 /* =====================================================================
-   COMPASS — points to nearest hunter
+   COMPASS
    ===================================================================== */
 function updateCompass(){
   let nearest = null;
@@ -2420,7 +2487,7 @@ function updateCompass(){
 }
 
 /* =====================================================================
-   HUD UPDATE — aggregate across all hunters
+   HUD UPDATE
    ===================================================================== */
 let hudAccum = 0;
 function updateHUD(dt){
@@ -2458,7 +2525,7 @@ function updateHUD(dt){
   ui.hpFill.style.width = clamp(player.health, 0, 100) + '%';
   ui.stFill.style.width = clamp(player.stamina, 0, 100) + '%';
 
-  const concealed = player.inBush && player.crouchT > 0.45;
+  const concealed = player.inBush && player.crouchT > 0.45 && player.pos.y < 0.2;
   ui.hiddenTag.classList.toggle('on', concealed);
 
   const distToExit = Math.hypot(player.pos.x - EXIT.x, player.pos.z - EXIT.z);
@@ -2469,6 +2536,9 @@ function updateHUD(dt){
   } else {
     ui.objSub.textContent = 'GATE — ' + Math.round(distToExit) + ' M';
   }
+
+  // Jump button visibility
+  ui.jumpBtn.classList.toggle('on', gameState === 'playing' && player.alive);
 }
 
 /* =====================================================================
@@ -2678,13 +2748,15 @@ function animate(){
     updateCompass();
   } else if (gameState === 'menu'){
     updateMenuCamera(t);
-    cow.update(dt, 0, 0, t);
+    cow.update(dt, 0, 0, t, 0, 0);
     ui.compass.classList.remove('on');
+    ui.jumpBtn.classList.remove('on');
   } else {
     updateProjectiles(dt);
     updateCamera(dt);
     for (const h of hunters) h.bear.update(dt, 0, t);
     updateCompass();
+    ui.jumpBtn.classList.remove('on');
   }
 
   updateSun();
@@ -2710,7 +2782,7 @@ window.addEventListener('resize', () => {
 });
 
 /* =====================================================================
-   BOOT — spawn a single hunter + no AI cows so menu camera has something
+   BOOT
    ===================================================================== */
 spawnActors();
 camPos.set(SPAWN.x, 5, SPAWN.z + 12);
