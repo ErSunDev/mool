@@ -1,0 +1,2721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DULESIM</title>
+<style>
+  :root{
+    --accent:#8ef0a8;
+    --warn:#ffcc55;
+    --danger:#ff5a4a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{
+    width:100%;height:100%;overflow:hidden;background:#05070a;
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    color:#e8f2ea; user-select:none;
+  }
+  canvas{display:block;}
+  #ui{position:fixed;inset:0;pointer-events:none;z-index:10;}
+  #vignette{
+    position:fixed;inset:0;pointer-events:none;z-index:9;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0) 42%, rgba(0,0,0,0.55) 100%);
+    mix-blend-mode:multiply;
+  }
+  #damage{
+    position:fixed;inset:0;pointer-events:none;z-index:11;
+    background:radial-gradient(ellipse at center, rgba(255,0,0,0) 35%, rgba(180,10,0,0.75) 100%);
+    opacity:0;transition:opacity .18s ease-out;
+  }
+  .panel{
+    position:absolute;
+    background:linear-gradient(180deg, rgba(8,14,12,.62), rgba(8,14,12,.34));
+    border:1px solid rgba(142,240,168,.22);
+    border-radius:3px;
+    backdrop-filter:blur(6px);
+    padding:10px 14px;
+    box-shadow:0 6px 26px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  #objective{
+    top:22px;left:22px;min-width:250px;
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+  }
+  #objective .label{color:#7fa88c;font-size:9.5px;letter-spacing:.3em;margin-bottom:5px;}
+  #objective .main{color:var(--accent);font-size:14px;letter-spacing:.16em;font-weight:600;
+    text-shadow:0 0 14px rgba(142,240,168,.55);}
+  #objective .sub{color:#9db4a6;margin-top:7px;font-size:10px;letter-spacing:.14em;}
+  #detectWrap{
+    top:22px;left:50%;transform:translateX(-50%);
+    width:300px;padding:9px 14px 11px;
+    opacity:0;transition:opacity .25s;
+  }
+  #detectWrap.on{opacity:1;}
+  #detectTop{display:flex;justify-content:space-between;align-items:center;
+    font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:#9db4a6;margin-bottom:7px;}
+  #detectState{font-weight:700;letter-spacing:.2em;}
+  #detectBar{height:5px;background:rgba(255,255,255,.09);border-radius:3px;overflow:hidden;}
+  #detectFill{height:100%;width:0%;background:var(--warn);border-radius:3px;
+    transition:width .06s linear, background .2s;box-shadow:0 0 12px currentColor;}
+  #compass{
+    position:absolute;
+    top:84px;left:50%;transform:translateX(-50%);
+    width:44px;height:44px;border-radius:50%;
+    background:rgba(8,14,12,.62);
+    border:1px solid rgba(142,240,168,.28);
+    backdrop-filter:blur(6px);
+    display:flex;align-items:center;justify-content:center;
+    opacity:0;transition:opacity .3s;
+    box-shadow:0 4px 16px rgba(0,0,0,.5);
+  }
+  #compass.on{opacity:1;}
+  #compassArrow{
+    width:0;height:0;
+    border-left:6px solid transparent;
+    border-right:6px solid transparent;
+    border-bottom:15px solid #ff5a4a;
+    filter: drop-shadow(0 0 6px rgba(255,90,74,.9));
+    transform-origin: 50% 65%;
+    transform: rotate(0rad);
+    transition: transform .08s linear;
+  }
+  #status{bottom:24px;left:22px;width:250px;}
+  .statRow{display:flex;align-items:center;gap:9px;margin-bottom:8px;}
+  .statRow:last-child{margin-bottom:0;}
+  .statLabel{font-size:9px;letter-spacing:.24em;color:#8ba394;width:44px;text-transform:uppercase;}
+  .bar{flex:1;height:7px;background:rgba(255,255,255,.09);border-radius:4px;overflow:hidden;}
+  .barFill{height:100%;width:100%;border-radius:4px;transition:width .12s linear;}
+  #hpFill{background:linear-gradient(90deg,#ff4a3a,#ff8a6a);box-shadow:0 0 12px rgba(255,74,58,.6);}
+  #stFill{background:linear-gradient(90deg,#7ad4ff,#bff0ff);box-shadow:0 0 12px rgba(122,212,255,.55);}
+  #hiddenTag{
+    bottom:120px;left:22px;
+    font-size:11px;letter-spacing:.28em;text-transform:uppercase;
+    color:#8ef0a8;padding:7px 13px;
+    opacity:0;transition:opacity .2s;
+  }
+  #hiddenTag.on{opacity:1;}
+  #controls{
+    bottom:24px;right:22px;font-size:10px;letter-spacing:.14em;
+    color:#93a89b;line-height:1.85;text-align:right;text-transform:uppercase;
+  }
+  #controls b{color:#d8ecdc;font-weight:600;}
+
+  /* Cow counter for multiplayer */
+  #cowCounter{
+    position:fixed;
+    top:22px;left:22px;
+    margin-top:78px;
+    padding:8px 14px;
+    background:linear-gradient(180deg, rgba(8,14,12,.72), rgba(8,14,12,.42));
+    border:1px solid rgba(142,240,168,.28);
+    border-radius:3px;
+    backdrop-filter:blur(6px);
+    font-size:10px;letter-spacing:.24em;text-transform:uppercase;
+    color:#9db4a6;z-index:12;
+    display:none;
+  }
+  #cowCounter.on{display:block;}
+  #cowCountNum{color:#8ef0a8;font-weight:700;font-size:13px;
+    text-shadow:0 0 10px rgba(142,240,168,.6);margin-left:6px;}
+
+  #fpsDisplay{
+    position:fixed;
+    top:26px;right:76px;
+    font-size:10px;letter-spacing:.15em;color:#8ef0a8;
+    font-family:"Consolas","Courier New",monospace;
+    text-transform:uppercase;
+    pointer-events:none;z-index:15;
+    padding:6px 10px;
+    background:rgba(8,14,12,.55);
+    border:1px solid rgba(142,240,168,.2);
+    border-radius:3px;
+    display:none;
+  }
+  #settingsBtn{
+    position:fixed;
+    top:22px;right:22px;
+    width:40px;height:40px;
+    background:rgba(8,14,12,.72);
+    border:1px solid rgba(142,240,168,.32);
+    border-radius:50%;
+    color:#8ef0a8;
+    font-size:20px;line-height:1;
+    cursor:pointer;z-index:35;
+    backdrop-filter:blur(6px);
+    display:flex;align-items:center;justify-content:center;
+    transition:transform .25s cubic-bezier(.4,0,.2,1), background .2s, border-color .2s, box-shadow .2s;
+    padding:0;
+  }
+  #settingsBtn:hover{
+    transform:rotate(60deg);
+    background:rgba(8,14,12,.92);
+    border-color:#8ef0a8;
+    box-shadow:0 0 20px rgba(142,240,168,.4);
+  }
+
+  /* Toast */
+  #toast{
+    position:fixed;
+    top:130px;left:50%;transform:translateX(-50%);
+    padding:9px 22px;
+    background:rgba(255,90,74,.92);
+    color:#fff;
+    font-size:11px;letter-spacing:.24em;text-transform:uppercase;
+    border-radius:2px;font-weight:600;
+    z-index:20;opacity:0;transition:opacity .3s;
+    pointer-events:none;
+    box-shadow:0 6px 22px rgba(0,0,0,.6);
+  }
+  #toast.show{opacity:1;}
+  #toast.good{background:rgba(90,214,138,.92);}
+
+  /* Settings overlay */
+  #settingsOverlay{
+    position:fixed;inset:0;z-index:40;
+    background:rgba(2,4,3,.82);
+    backdrop-filter:blur(8px);
+    display:flex;align-items:center;justify-content:center;
+    pointer-events:auto;transition:opacity .25s;
+  }
+  #settingsOverlay.hidden{opacity:0;pointer-events:none;}
+  #settingsPanel{
+    width:min(460px, 92vw);
+    max-height:88vh;overflow-y:auto;
+    background:linear-gradient(180deg, rgba(14,20,16,.97), rgba(8,12,10,.97));
+    border:1px solid rgba(142,240,168,.28);
+    border-radius:4px;
+    box-shadow:0 24px 80px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.05);
+    padding:22px 24px 18px;
+  }
+  #settingsPanel::-webkit-scrollbar{width:6px;}
+  #settingsPanel::-webkit-scrollbar-thumb{background:rgba(142,240,168,.3);border-radius:3px;}
+  #settingsHeader{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:11px;letter-spacing:.32em;text-transform:uppercase;
+    color:#8ef0a8;padding-bottom:14px;margin-bottom:18px;
+    border-bottom:1px solid rgba(142,240,168,.18);
+  }
+  #settingsClose{
+    background:none;border:none;color:#7fa88c;font-size:16px;cursor:pointer;
+    padding:2px 8px;transition:color .15s;
+  }
+  #settingsClose:hover{color:#ff5a4a;}
+  .settingGroupTitle{
+    font-size:9px;letter-spacing:.28em;color:#7fa88c;
+    text-transform:uppercase;margin-bottom:9px;
+  }
+  .presetRow{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:16px;
+  }
+  .presetBtn{
+    padding:9px 4px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(142,240,168,.18);
+    color:#9db4a6;cursor:pointer;border-radius:2px;
+    transition:all .15s;font-weight:600;
+  }
+  .presetBtn:hover{background:rgba(142,240,168,.1);color:#c8ecd2;border-color:rgba(142,240,168,.4);}
+  .presetBtn.active{
+    background:linear-gradient(180deg, rgba(142,240,168,.28), rgba(142,240,168,.14));
+    border-color:#8ef0a8;color:#eafff0;
+    box-shadow:0 0 16px rgba(142,240,168,.35);
+  }
+  .settingRow{
+    display:flex;align-items:center;gap:12px;
+    padding:9px 0;border-bottom:1px solid rgba(255,255,255,.04);
+    font-size:11px;letter-spacing:.1em;color:#b6c9bb;
+  }
+  .settingRow:last-child{border-bottom:none;}
+  .settingRow > label{
+    flex:1;text-transform:uppercase;letter-spacing:.14em;font-size:10px;
+  }
+  .settingValue{
+    font-family:"Consolas","Courier New",monospace;
+    font-size:10.5px;color:#8ef0a8;min-width:44px;text-align:right;
+  }
+  .settingRow input[type="range"]{
+    -webkit-appearance:none;appearance:none;
+    width:130px;height:3px;
+    background:rgba(255,255,255,.12);
+    border-radius:2px;outline:none;cursor:pointer;
+  }
+  .settingRow input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;
+    width:13px;height:13px;border-radius:50%;
+    background:#8ef0a8;cursor:pointer;
+    box-shadow:0 0 10px rgba(142,240,168,.7);
+    transition:transform .1s;
+  }
+  .settingRow input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
+  .settingRow input[type="range"]::-moz-range-thumb{
+    width:13px;height:13px;border-radius:50%;
+    background:#8ef0a8;cursor:pointer;border:none;
+    box-shadow:0 0 10px rgba(142,240,168,.7);
+  }
+  .settingRow select{
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(142,240,168,.22);
+    color:#d8ecdc;
+    padding:5px 8px;border-radius:2px;
+    font-size:10.5px;font-family:inherit;
+    letter-spacing:.08em;cursor:pointer;outline:none;
+  }
+  .settingRow select:focus{border-color:#8ef0a8;}
+  .switchWrap{
+    position:relative;width:34px;height:18px;flex-shrink:0;
+  }
+  .switchWrap input{opacity:0;width:0;height:0;}
+  .switchTrack{
+    position:absolute;inset:0;
+    background:rgba(255,255,255,.1);
+    border-radius:9px;transition:background .2s;cursor:pointer;
+  }
+  .switchTrack::before{
+    content:"";
+    position:absolute;width:14px;height:14px;border-radius:50%;
+    background:#93a89b;left:2px;top:2px;
+    transition:transform .22s cubic-bezier(.4,0,.2,1), background .2s;
+  }
+  .switchWrap input:checked + .switchTrack{background:rgba(142,240,168,.35);}
+  .switchWrap input:checked + .switchTrack::before{
+    transform:translateX(16px);
+    background:#8ef0a8;
+    box-shadow:0 0 8px rgba(142,240,168,.8);
+  }
+  #settingsFooter{
+    margin-top:18px;padding-top:16px;
+    border-top:1px solid rgba(142,240,168,.14);
+    display:flex;justify-content:flex-end;
+  }
+  #settingsReset{
+    padding:9px 20px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+    background:transparent;
+    border:1px solid rgba(255,138,58,.4);
+    color:#ff8a3a;cursor:pointer;border-radius:2px;
+    transition:all .15s;
+  }
+  #settingsReset:hover{background:rgba(255,138,58,.12);border-color:#ff8a3a;}
+
+  /* Multiplayer Menu */
+  #multiOverlay{
+    position:fixed;inset:0;z-index:32;
+    background:radial-gradient(ellipse at center, rgba(4,9,7,.85) 0%, rgba(2,4,3,.97) 70%);
+    backdrop-filter:blur(6px);
+    display:flex;align-items:center;justify-content:center;
+    pointer-events:auto;transition:opacity .3s;
+  }
+  #multiOverlay.hidden{opacity:0;pointer-events:none;}
+  #multiPanel{
+    width:min(480px, 92vw);
+    background:linear-gradient(180deg, rgba(14,20,16,.97), rgba(8,12,10,.97));
+    border:1px solid rgba(142,240,168,.28);
+    border-radius:4px;
+    box-shadow:0 24px 80px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.05);
+    padding:24px 26px 22px;
+  }
+  #multiHeader{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:11px;letter-spacing:.32em;text-transform:uppercase;
+    color:#8ef0a8;padding-bottom:14px;margin-bottom:14px;
+    border-bottom:1px solid rgba(142,240,168,.18);
+  }
+  #multiClose{
+    background:none;border:none;color:#7fa88c;font-size:16px;cursor:pointer;
+    padding:2px 8px;transition:color .15s;
+  }
+  #multiClose:hover{color:#ff5a4a;}
+  .multiDesc{
+    font-size:11px;letter-spacing:.08em;color:#9db4a6;
+    line-height:1.85;margin-bottom:22px;
+  }
+  .multiSetting{
+    margin-bottom:18px;
+  }
+  .multiSettingTop{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:8px;
+    font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+    color:#b6c9bb;
+  }
+  .multiSettingTop span{
+    font-family:"Consolas","Courier New",monospace;
+    font-size:14px;font-weight:700;color:#8ef0a8;
+    text-shadow:0 0 10px rgba(142,240,168,.6);
+  }
+  .multiSetting input[type="range"]{
+    -webkit-appearance:none;appearance:none;
+    width:100%;height:4px;
+    background:rgba(255,255,255,.1);
+    border-radius:2px;outline:none;cursor:pointer;
+  }
+  .multiSetting input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;
+    width:16px;height:16px;border-radius:50%;
+    background:#8ef0a8;cursor:pointer;
+    box-shadow:0 0 12px rgba(142,240,168,.9);
+    transition:transform .1s;
+  }
+  .multiSetting input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.15);}
+  .multiSetting input[type="range"]::-moz-range-thumb{
+    width:16px;height:16px;border-radius:50%;
+    background:#8ef0a8;cursor:pointer;border:none;
+    box-shadow:0 0 12px rgba(142,240,168,.9);
+  }
+  #startMulti{
+    width:100%;
+    padding:14px 20px;
+    margin-top:8px;
+    font-size:11px;letter-spacing:.32em;text-transform:uppercase;
+    color:#06120b;
+    background:linear-gradient(180deg,#a8f7bf,#5fd68a);
+    border:none;border-radius:2px;font-weight:700;
+    cursor:pointer;
+    box-shadow:0 0 34px rgba(142,240,168,.5), 0 8px 30px rgba(0,0,0,.5);
+    transition:transform .15s, box-shadow .15s, filter .15s;
+  }
+  #startMulti:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 0 60px rgba(142,240,168,.85);filter:brightness(1.08);}
+  #backToMenu{
+    width:100%;
+    padding:11px 20px;
+    margin-top:10px;
+    font-size:10px;letter-spacing:.24em;text-transform:uppercase;
+    color:#9db4a6;
+    background:transparent;
+    border:1px solid rgba(142,240,168,.22);
+    border-radius:2px;cursor:pointer;
+    transition:all .15s;
+  }
+  #backToMenu:hover{background:rgba(142,240,168,.08);border-color:rgba(142,240,168,.42);color:#c8ecd2;}
+
+  /* Main menu overlay */
+  #overlay{
+    position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;
+    background:radial-gradient(ellipse at center, rgba(4,9,7,.78) 0%, rgba(2,4,3,.96) 70%);
+    backdrop-filter:blur(3px);
+    pointer-events:auto;transition:opacity .5s;
+  }
+  #overlay.hidden{opacity:0;pointer-events:none;}
+  #title{
+    font-size:clamp(46px,10vw,120px);font-weight:800;letter-spacing:.20em;
+    color:#eafff0;line-height:1;margin-bottom:6px;
+    text-shadow:0 0 40px rgba(142,240,168,.45), 0 0 100px rgba(142,240,168,.2);
+  }
+  #subtitle{font-size:11px;letter-spacing:.62em;color:#7fa88c;text-transform:uppercase;margin-bottom:36px;}
+  #tagline{font-size:14px;letter-spacing:.18em;color:#b6c9bb;max-width:620px;line-height:2;margin-bottom:42px;}
+  #tagline em{color:#8ef0a8;font-style:normal;}
+  .menuBtn{
+    pointer-events:auto;cursor:pointer;
+    padding:15px 52px;font-size:12px;letter-spacing:.34em;text-transform:uppercase;
+    color:#06120b;background:linear-gradient(180deg,#a8f7bf,#5fd68a);
+    border:none;border-radius:2px;font-weight:700;
+    box-shadow:0 0 34px rgba(142,240,168,.5), 0 8px 30px rgba(0,0,0,.5);
+    transition:transform .15s, box-shadow .15s, filter .15s;
+    margin:6px;
+    min-width:260px;
+  }
+  .menuBtn:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 0 60px rgba(142,240,168,.85);filter:brightness(1.08);}
+  .menuBtn:active{transform:translateY(0) scale(.99);}
+  .menuBtn.secondary{
+    color:#8ef0a8;
+    background:linear-gradient(180deg, rgba(142,240,168,.14), rgba(142,240,168,.06));
+    border:1px solid rgba(142,240,168,.5);
+    box-shadow:0 0 20px rgba(142,240,168,.2), 0 6px 20px rgba(0,0,0,.4);
+  }
+  .menuBtn.secondary:hover{
+    background:linear-gradient(180deg, rgba(142,240,168,.24), rgba(142,240,168,.14));
+    box-shadow:0 0 40px rgba(142,240,168,.5);
+  }
+  .menuBtnRow{display:flex;flex-wrap:wrap;justify-content:center;max-width:640px;}
+  #resultTitle{font-size:clamp(38px,7vw,80px);font-weight:800;letter-spacing:.16em;margin-bottom:14px;}
+  #resultSub{font-size:13px;letter-spacing:.24em;color:#9db4a6;margin-bottom:38px;text-transform:uppercase;}
+  .win{color:#8ef0a8;text-shadow:0 0 44px rgba(142,240,168,.7);}
+  .lose{color:#ff5a4a;text-shadow:0 0 44px rgba(255,90,74,.7);}
+  #hint{
+    position:fixed;bottom:26px;left:50%;transform:translateX(-50%);
+    font-size:10px;letter-spacing:.3em;color:#7d9488;text-transform:uppercase;
+    z-index:12;pointer-events:none;opacity:0;transition:opacity .4s;
+  }
+  #hint.on{opacity:1;}
+</style>
+</head>
+<body>
+
+<div id="vignette"></div>
+<div id="damage"></div>
+
+<div id="ui">
+  <div id="objective" class="panel">
+    <div class="label">Objective</div>
+    <div class="main" id="objMain">REACH THE GATE</div>
+    <div class="sub" id="objSub">DISTANCE — m</div>
+  </div>
+
+  <div id="cowCounter">
+    <span>COWS ALIVE</span><span id="cowCountNum">4</span>
+  </div>
+
+  <div id="detectWrap" class="panel">
+    <div id="detectTop">
+      <span>Hunter Awareness</span>
+      <span id="detectState" style="color:#8ef0a8">HIDDEN</span>
+    </div>
+    <div id="detectBar"><div id="detectFill"></div></div>
+  </div>
+
+  <div id="compass">
+    <div id="compassArrow"></div>
+  </div>
+
+  <div id="status" class="panel">
+    <div class="statRow"><span class="statLabel">Health</span><div class="bar"><div class="barFill" id="hpFill"></div></div></div>
+    <div class="statRow"><span class="statLabel">Stam</span><div class="bar"><div class="barFill" id="stFill"></div></div></div>
+  </div>
+
+  <div id="hiddenTag" class="panel">◈ CONCEALED</div>
+
+  <div id="controls" class="panel">
+    <div><b>W A S D</b> — Move</div>
+    <div><b>MOUSE</b> — Look</div>
+    <div><b>SHIFT</b> — Sprint</div>
+    <div><b>CTRL / C</b> — Crouch</div>
+    <div><b>ESC</b> — Release cursor</div>
+  </div>
+</div>
+
+<div id="toast">Cow caught!</div>
+<div id="fpsDisplay">60 FPS</div>
+<button id="settingsBtn" title="Graphics Settings">⚙</button>
+
+<!-- ============ MULTIPLAYER MENU ============ -->
+<div id="multiOverlay" class="hidden">
+  <div id="multiPanel">
+    <div id="multiHeader">
+      <span>Local Multiplayer</span>
+      <button id="multiClose" aria-label="Close">✕</button>
+    </div>
+    <div class="multiDesc">
+      A simulated party hunt. Choose how many hunters and cows join the round.<br>
+      Other cows are AI — they wander, flee, and can be caught just like you.<br>
+      You win if <em>you</em> reach the gate.
+    </div>
+
+    <div class="multiSetting">
+      <div class="multiSettingTop">
+        <label>Hunters (Bears)</label>
+        <span id="numBearsVal">2</span>
+      </div>
+      <input type="range" id="numBears" min="1" max="4" step="1" value="2">
+    </div>
+
+    <div class="multiSetting">
+      <div class="multiSettingTop">
+        <label>Cows (You + AI)</label>
+        <span id="numCowsVal">3</span>
+      </div>
+      <input type="range" id="numCows" min="2" max="5" step="1" value="3">
+    </div>
+
+    <button id="startMulti">Start Hunt</button>
+    <button id="backToMenu">Back to Menu</button>
+  </div>
+</div>
+
+<!-- ============ SETTINGS ============ -->
+<div id="settingsOverlay" class="hidden">
+  <div id="settingsPanel">
+    <div id="settingsHeader">
+      <span>Graphics Settings</span>
+      <button id="settingsClose" aria-label="Close">✕</button>
+    </div>
+
+    <div class="settingGroupTitle">Quality Preset</div>
+    <div class="presetRow">
+      <button class="presetBtn" data-preset="low">Low</button>
+      <button class="presetBtn" data-preset="medium">Medium</button>
+      <button class="presetBtn active" data-preset="high">High</button>
+      <button class="presetBtn" data-preset="ultra">Ultra</button>
+    </div>
+
+    <div class="settingRow">
+      <label>Resolution Scale</label>
+      <input type="range" id="sResolution" min="40" max="100" step="5" value="100">
+      <span class="settingValue" id="vResolution">100%</span>
+    </div>
+    <div class="settingRow">
+      <label>Shadows</label>
+      <div class="switchWrap">
+        <input type="checkbox" id="sShadows" checked>
+        <span class="switchTrack"></span>
+      </div>
+    </div>
+    <div class="settingRow" id="rowShadowSize">
+      <label>Shadow Quality</label>
+      <select id="sShadowSize">
+        <option value="512">Low</option>
+        <option value="1024">Medium</option>
+        <option value="2048" selected>High</option>
+      </select>
+    </div>
+    <div class="settingRow">
+      <label>Bloom</label>
+      <div class="switchWrap">
+        <input type="checkbox" id="sBloom" checked>
+        <span class="switchTrack"></span>
+      </div>
+    </div>
+    <div class="settingRow" id="rowBloomStrength">
+      <label>Bloom Strength</label>
+      <input type="range" id="sBloomStrength" min="0" max="100" step="5" value="42">
+      <span class="settingValue" id="vBloomStrength">0.42</span>
+    </div>
+    <div class="settingRow">
+      <label>Grass Detail</label>
+      <div class="switchWrap">
+        <input type="checkbox" id="sGrass" checked>
+        <span class="switchTrack"></span>
+      </div>
+    </div>
+    <div class="settingRow">
+      <label>Atmospheric Fog</label>
+      <div class="switchWrap">
+        <input type="checkbox" id="sFog" checked>
+        <span class="switchTrack"></span>
+      </div>
+    </div>
+    <div class="settingRow">
+      <label>Exposure</label>
+      <input type="range" id="sExposure" min="50" max="150" step="5" value="105">
+      <span class="settingValue" id="vExposure">1.05</span>
+    </div>
+    <div class="settingRow">
+      <label>Show FPS</label>
+      <div class="switchWrap">
+        <input type="checkbox" id="sFps">
+        <span class="switchTrack"></span>
+      </div>
+    </div>
+    <div id="settingsFooter">
+      <button id="settingsReset">Reset to Default</button>
+    </div>
+  </div>
+</div>
+
+<div id="hint">CLICK TO CAPTURE MOUSE</div>
+
+<div id="overlay">
+  <div id="title">DULESIM</div>
+  <div id="subtitle">A Stealth Escape</div>
+  <div id="tagline">
+    You are <em>DULESIM</em> — a cow who strayed from the herd.<br>
+    A bear hunts these woods. He is no enemy — only a hunter<br>
+    who knows every trail. Hide, stay low, and reach the <em>green gate</em>.
+  </div>
+  <div class="menuBtnRow">
+    <button class="menuBtn" id="startBtn">Begin Escape</button>
+    <button class="menuBtn secondary" id="multiBtn">Local Multiplayer</button>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+/* =====================================================================
+   UTIL
+   ===================================================================== */
+let _seed = 20240917;
+function rnd(){ _seed = (_seed * 1664525 + 1013904223) >>> 0; return _seed / 4294967296; }
+function rr(a,b){ return a + (b-a)*rnd(); }
+function clamp(v,a,b){ return v < a ? a : v > b ? b : v; }
+function angleLerp(a,b,t){
+  let d = b - a;
+  while (d >  Math.PI) d -= Math.PI*2;
+  while (d < -Math.PI) d += Math.PI*2;
+  return a + d*t;
+}
+
+/* =====================================================================
+   RENDERER / SCENE / CAMERA
+   ===================================================================== */
+const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x9db4c8, 0.0135);
+const fogRef = scene.fog;
+
+const camera = new THREE.PerspectiveCamera(58, window.innerWidth/window.innerHeight, 0.1, 900);
+
+/* =====================================================================
+   SKY
+   ===================================================================== */
+{
+  const skyGeo = new THREE.SphereGeometry(420, 32, 20);
+  const skyMat = new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    depthWrite: false,
+    uniforms: {
+      uTop:    { value: new THREE.Color(0x2f6ba8) },
+      uMid:    { value: new THREE.Color(0x9dc4e4) },
+      uBottom: { value: new THREE.Color(0xd8e6ef) },
+      uSunDir: { value: new THREE.Vector3(0.45, 0.62, 0.64).normalize() }
+    },
+    vertexShader: `
+      varying vec3 vWorld;
+      void main(){
+        vWorld = (modelMatrix * vec4(position,1.0)).xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+      }`,
+    fragmentShader: `
+      uniform vec3 uTop, uMid, uBottom, uSunDir;
+      varying vec3 vWorld;
+      void main(){
+        vec3 dir = normalize(vWorld);
+        float h = clamp(dir.y, -1.0, 1.0);
+        vec3 col = mix(uBottom, uMid, smoothstep(-0.05, 0.30, h));
+        col = mix(col, uTop, smoothstep(0.22, 0.85, h));
+        float sun = pow(max(dot(dir, normalize(uSunDir)), 0.0), 220.0);
+        float glow = pow(max(dot(dir, normalize(uSunDir)), 0.0), 8.0) * 0.28;
+        col += vec3(1.0, 0.92, 0.75) * (sun * 1.6 + glow);
+        gl_FragColor = vec4(col, 1.0);
+      }`
+  });
+  const sky = new THREE.Mesh(skyGeo, skyMat);
+  sky.frustumCulled = false;
+  scene.add(sky);
+}
+
+/* =====================================================================
+   LIGHTS
+   ===================================================================== */
+const hemi = new THREE.HemisphereLight(0xbcd7ff, 0x415c30, 1.15);
+scene.add(hemi);
+
+const sun = new THREE.DirectionalLight(0xfff1d6, 3.1);
+sun.position.set(60, 90, 45);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 1;
+sun.shadow.camera.far = 260;
+sun.shadow.camera.left   = -46;
+sun.shadow.camera.right  =  46;
+sun.shadow.camera.top    =  46;
+sun.shadow.camera.bottom = -46;
+sun.shadow.bias = -0.0006;
+sun.shadow.normalBias = 0.045;
+scene.add(sun);
+scene.add(sun.target);
+
+const sunOffset = new THREE.Vector3(60, 90, 45);
+
+/* =====================================================================
+   WORLD CONSTANTS
+   ===================================================================== */
+const WORLD = 50;
+const SPAWN  = new THREE.Vector3(-40, 0, 40);
+const EXIT   = new THREE.Vector3( 40, 0, -40);
+
+const obstacles = [];
+const bushes    = [];
+const occluders = [];
+
+/* =====================================================================
+   GROUND
+   ===================================================================== */
+function makeGroundTexture(){
+  const S = 1024;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#3d5a2b';
+  ctx.fillRect(0,0,S,S);
+  for (let i=0;i<1100;i++){
+    const x = Math.random()*S, y = Math.random()*S, r = 18 + Math.random()*130;
+    const g = ctx.createRadialGradient(x,y,0,x,y,r);
+    const hue = 68 + Math.random()*44;
+    const l = 13 + Math.random()*24;
+    g.addColorStop(0, `hsla(${hue}, 38%, ${l}%, 0.55)`);
+    g.addColorStop(1, `hsla(${hue}, 38%, ${l}%, 0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+  }
+  for (let i=0;i<70000;i++){
+    const x = Math.random()*S, y = Math.random()*S;
+    const l = 12 + Math.random()*32;
+    ctx.fillStyle = `hsla(${72+Math.random()*40}, ${28+Math.random()*34}%, ${l}%, ${0.12+Math.random()*0.38})`;
+    ctx.fillRect(x, y, 1+Math.random()*3, 1+Math.random()*3);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(18,18);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return tex;
+}
+{
+  const groundTex = makeGroundTexture();
+  const gGeo = new THREE.PlaneGeometry(520, 520, 1, 1);
+  gGeo.rotateX(-Math.PI/2);
+  const gMat = new THREE.MeshStandardMaterial({
+    map: groundTex, color: 0xffffff, roughness: 0.97, metalness: 0.0
+  });
+  const ground = new THREE.Mesh(gGeo, gMat);
+  ground.receiveShadow = true;
+  scene.add(ground);
+}
+
+/* =====================================================================
+   GRASS
+   ===================================================================== */
+let grassMatRef = null;
+let grassMesh = null;
+function makeBladeTexture(){
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0,0,64,128);
+  const grad = ctx.createLinearGradient(0,128,0,0);
+  grad.addColorStop(0,   '#243d18');
+  grad.addColorStop(0.45,'#3f6b25');
+  grad.addColorStop(0.8, '#6fa03a');
+  grad.addColorStop(1,   '#9dc95a');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(32, 0);
+  ctx.quadraticCurveTo(46, 60, 40, 128);
+  ctx.lineTo(24, 128);
+  ctx.quadraticCurveTo(18, 60, 32, 0);
+  ctx.fill();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+{
+  const bladeTex = makeBladeTexture();
+  const geo = new THREE.PlaneGeometry(0.16, 0.85, 1, 3);
+  geo.translate(0, 0.425, 0);
+  const mat = new THREE.MeshStandardMaterial({
+    map: bladeTex, alphaTest: 0.45, side: THREE.DoubleSide,
+    roughness: 0.95, metalness: 0.0
+  });
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = { value: 0 };
+    mat.userData.shader = shader;
+    shader.vertexShader = 'uniform float uTime;\n' + shader.vertexShader;
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+       float ph = instanceMatrix[3][0] * 0.35 + instanceMatrix[3][2] * 0.27;
+       float sway = sin(uTime * 1.5 + ph) * 0.10 + sin(uTime * 3.1 + ph * 1.7) * 0.035;
+       transformed.x += sway * position.y * 1.6;
+       transformed.z += sway * position.y * 0.7;
+      `
+    );
+  };
+  grassMatRef = mat;
+  const COUNT = 13000;
+  const mesh = new THREE.InstancedMesh(geo, mat, COUNT);
+  mesh.castShadow = false; mesh.receiveShadow = false;
+  const dummy = new THREE.Object3D();
+  const col = new THREE.Color();
+  for (let i=0;i<COUNT;i++){
+    const a = rnd()*Math.PI*2;
+    const rad = Math.sqrt(rnd()) * (WORLD - 2);
+    dummy.position.set(Math.cos(a)*rad, 0, Math.sin(a)*rad);
+    dummy.rotation.set(0, rnd()*Math.PI*2, 0);
+    const s = rr(0.7, 1.7);
+    dummy.scale.set(s, rr(0.8, 1.9), s);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(i, dummy.matrix);
+    col.setHSL(0.24 + rnd()*0.08, 0.42 + rnd()*0.24, 0.34 + rnd()*0.24);
+    mesh.setColorAt(i, col);
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  scene.add(mesh);
+  grassMesh = mesh;
+}
+
+/* =====================================================================
+   TREES
+   ===================================================================== */
+const treePositions = [];
+{
+  const trunkGeo = new THREE.CylinderGeometry(0.22, 0.42, 5.0, 7);
+  trunkGeo.translate(0, 2.5, 0);
+  const trunkMat = new THREE.MeshStandardMaterial({ color:0x54402e, roughness:0.98, flatShading:true });
+  const blobGeo = new THREE.IcosahedronGeometry(1, 1);
+  const blobMat = new THREE.MeshStandardMaterial({ color:0xffffff, roughness:0.92, flatShading:true });
+  const TREES = 86;
+  const trunks   = new THREE.InstancedMesh(trunkGeo, trunkMat, TREES);
+  const blobs    = new THREE.InstancedMesh(blobGeo,  blobMat,  TREES*3);
+  trunks.castShadow = true; trunks.receiveShadow = true;
+  blobs.castShadow = true;  blobs.receiveShadow = true;
+  const dummy = new THREE.Object3D();
+  const col   = new THREE.Color();
+  let placed = 0, guard = 0;
+  while (placed < TREES && guard < 4000){
+    guard++;
+    const x = rr(-WORLD+3, WORLD-3);
+    const z = rr(-WORLD+3, WORLD-3);
+    if (Math.hypot(x-SPAWN.x, z-SPAWN.z) < 9) continue;
+    if (Math.hypot(x-EXIT.x,  z-EXIT.z)  < 9) continue;
+    let ok = true;
+    for (const p of treePositions){
+      if ((p.x-x)**2 + (p.z-z)**2 < 26) { ok = false; break; }
+    }
+    if (!ok) continue;
+    treePositions.push({ x, z });
+    const scale = rr(0.8, 1.5);
+    const rot   = rnd()*Math.PI*2;
+    const lean  = rr(-0.05, 0.05);
+    dummy.position.set(x, 0, z);
+    dummy.rotation.set(lean, rot, lean*0.6);
+    dummy.scale.set(scale, scale, scale);
+    dummy.updateMatrix();
+    trunks.setMatrixAt(placed, dummy.matrix);
+    const baseHue = 0.24 + rnd()*0.07;
+    for (let b=0;b<3;b++){
+      const idx = placed*3 + b;
+      const by = (3.5 + b*1.15) * scale;
+      const bs = (b === 0 ? 1.55 : b === 1 ? 1.25 : 0.9) * scale * rr(0.9, 1.15);
+      dummy.position.set(x + rr(-0.4,0.4)*scale, by, z + rr(-0.4,0.4)*scale);
+      dummy.rotation.set(rnd()*Math.PI, rnd()*Math.PI, rnd()*Math.PI);
+      dummy.scale.set(bs, bs*0.82, bs);
+      dummy.updateMatrix();
+      blobs.setMatrixAt(idx, dummy.matrix);
+      col.setHSL(baseHue, 0.40 + rnd()*0.22, 0.14 + b*0.045 + rnd()*0.05);
+      blobs.setColorAt(idx, col);
+    }
+    obstacles.push({ x, z, r: 0.85 * scale, tall: true });
+    occluders.push({ x, z, r: 0.85 * scale });
+    placed++;
+  }
+  trunks.count = placed;
+  blobs.count  = placed*3;
+  trunks.instanceMatrix.needsUpdate = true;
+  blobs.instanceMatrix.needsUpdate  = true;
+  if (blobs.instanceColor) blobs.instanceColor.needsUpdate = true;
+  scene.add(trunks, blobs);
+}
+
+/* =====================================================================
+   ROCKS
+   ===================================================================== */
+{
+  const geo = new THREE.DodecahedronGeometry(1, 0);
+  const mat = new THREE.MeshStandardMaterial({ color:0x8a8d8a, roughness:0.95, flatShading:true });
+  const N = 46;
+  const mesh = new THREE.InstancedMesh(geo, mat, N);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  const dummy = new THREE.Object3D();
+  const col = new THREE.Color();
+  for (let i=0;i<N;i++){
+    let x, z, ok=false, tries=0;
+    while(!ok && tries<50){
+      tries++;
+      x = rr(-WORLD+3, WORLD-3);
+      z = rr(-WORLD+3, WORLD-3);
+      if (Math.hypot(x-SPAWN.x, z-SPAWN.z) < 7) continue;
+      if (Math.hypot(x-EXIT.x,  z-EXIT.z)  < 7) continue;
+      ok = true;
+      for (const o of obstacles){
+        if ((o.x-x)**2 + (o.z-z)**2 < (o.r + 2.4)**2) { ok=false; break; }
+      }
+    }
+    if (!ok) continue;
+    const s = rr(0.55, 1.9);
+    dummy.position.set(x, s*0.42, z);
+    dummy.rotation.set(rnd()*Math.PI, rnd()*Math.PI, rnd()*Math.PI);
+    dummy.scale.set(s*rr(0.85,1.3), s*rr(0.6,0.95), s*rr(0.85,1.3));
+    dummy.updateMatrix();
+    mesh.setMatrixAt(i, dummy.matrix);
+    col.setHSL(0.09, 0.06, 0.32 + rnd()*0.22);
+    mesh.setColorAt(i, col);
+    obstacles.push({ x, z, r: s*0.95, tall: s > 1.1 });
+    if (s > 1.1) occluders.push({ x, z, r: s*0.95 });
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  scene.add(mesh);
+}
+
+/* =====================================================================
+   BUSHES
+   ===================================================================== */
+{
+  const geo = new THREE.IcosahedronGeometry(1, 1);
+  const mat = new THREE.MeshStandardMaterial({ color:0xffffff, roughness:0.95, flatShading:true });
+  const N = 34;
+  const mesh = new THREE.InstancedMesh(geo, mat, N*3);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  const dummy = new THREE.Object3D();
+  const col = new THREE.Color();
+  let idx = 0;
+  for (let i=0;i<N;i++){
+    const x = rr(-WORLD+4, WORLD-4);
+    const z = rr(-WORLD+4, WORLD-4);
+    if (Math.hypot(x-SPAWN.x, z-SPAWN.z) < 6) continue;
+    if (Math.hypot(x-EXIT.x,  z-EXIT.z)  < 6) continue;
+    const R = rr(1.9, 2.9);
+    bushes.push({ x, z, r: R * 1.05 });
+    for (let b=0;b<3;b++){
+      const s = R * rr(0.55, 0.85);
+      dummy.position.set(x + rr(-0.7,0.7), s*0.68, z + rr(-0.7,0.7));
+      dummy.rotation.set(rnd()*Math.PI, rnd()*Math.PI, rnd()*Math.PI);
+      dummy.scale.set(s, s*0.78, s);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(idx, dummy.matrix);
+      col.setHSL(0.27 + rnd()*0.06, 0.42 + rnd()*0.2, 0.13 + rnd()*0.08);
+      mesh.setColorAt(idx, col);
+      idx++;
+    }
+  }
+  mesh.count = idx;
+  mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  scene.add(mesh);
+}
+
+/* =====================================================================
+   FENCE
+   ===================================================================== */
+{
+  const postGeo = new THREE.BoxGeometry(0.22, 1.5, 0.22);
+  postGeo.translate(0, 0.75, 0);
+  const woodMat = new THREE.MeshStandardMaterial({ color:0x6b5236, roughness:0.95, flatShading:true });
+  const posts = [];
+  const step = 4;
+  for (let i=-WORLD; i<=WORLD; i+=step){
+    posts.push([ i, -WORLD ], [ i, WORLD ], [ -WORLD, i ], [ WORLD, i ]);
+  }
+  const mesh = new THREE.InstancedMesh(postGeo, woodMat, posts.length);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  const dummy = new THREE.Object3D();
+  posts.forEach((p, i) => {
+    dummy.position.set(p[0], 0, p[1]);
+    dummy.rotation.set(rr(-0.03,0.03), rnd()*0.2, rr(-0.05,0.05));
+    dummy.scale.set(1,1,1);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(i, dummy.matrix);
+  });
+  mesh.instanceMatrix.needsUpdate = true;
+  scene.add(mesh);
+  const railMat = new THREE.MeshStandardMaterial({ color:0x5c4630, roughness:0.95 });
+  const railGeo = new THREE.BoxGeometry(WORLD*2, 0.12, 0.08);
+  for (const y of [0.55, 1.0]){
+    const a = new THREE.Mesh(railGeo, railMat); a.position.set(0, y, -WORLD); scene.add(a);
+    const b = new THREE.Mesh(railGeo, railMat); b.position.set(0, y,  WORLD); scene.add(b);
+  }
+  const railGeoZ = new THREE.BoxGeometry(0.08, 0.12, WORLD*2);
+  for (const y of [0.55, 1.0]){
+    const a = new THREE.Mesh(railGeoZ, railMat); a.position.set(-WORLD, y, 0); scene.add(a);
+    const b = new THREE.Mesh(railGeoZ, railMat); b.position.set( WORLD, y, 0); scene.add(b);
+  }
+}
+
+/* =====================================================================
+   BARN + PROPS
+   ===================================================================== */
+{
+  const woodMat  = new THREE.MeshStandardMaterial({ color:0x7a3f2c, roughness:0.92 });
+  const roofMat  = new THREE.MeshStandardMaterial({ color:0x3a2a22, roughness:0.85 });
+  const barn = new THREE.Group();
+  barn.position.set(16, 0, 14);
+  barn.rotation.y = -0.5;
+  scene.add(barn);
+  const W = 13, D = 9, H = 5.2, T = 0.5;
+  function wall(w,h,d,x,y,z){
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), woodMat);
+    m.position.set(x,y,z);
+    m.castShadow = true; m.receiveShadow = true;
+    barn.add(m);
+    return m;
+  }
+  wall(W, H, T, 0, H/2, -D/2);
+  wall(T, H, D, -W/2, H/2, 0);
+  wall(T, H, D,  W/2, H/2, 0);
+  const gap = 3.4;
+  const segW = (W - gap)/2;
+  wall(segW, H, T, -(gap/2 + segW/2), H/2, D/2);
+  wall(segW, H, T,  (gap/2 + segW/2), H/2, D/2);
+  wall(gap, H-3.2, T, 0, 3.2 + (H-3.2)/2, D/2);
+  const roofL = new THREE.Mesh(new THREE.BoxGeometry(W+1.2, 0.35, D*0.62), roofMat);
+  roofL.position.set(0, H + 0.85, -D*0.24);
+  roofL.rotation.x = -0.44;
+  roofL.castShadow = true; roofL.receiveShadow = true;
+  barn.add(roofL);
+  const roofR = roofL.clone();
+  roofR.position.set(0, H + 0.85, D*0.24);
+  roofR.rotation.x = 0.44;
+  barn.add(roofR);
+  const barnWalls = [
+    [0, -D/2, W/2, T/2],
+    [-W/2, 0, T/2, D/2],
+    [ W/2, 0, T/2, D/2],
+    [-(gap/2 + segW/2), D/2, segW/2, T/2],
+    [ (gap/2 + segW/2), D/2, segW/2, T/2],
+  ];
+  const cos = Math.cos(barn.rotation.y), sin = Math.sin(barn.rotation.y);
+  for (const [lx, lz, hw, hd] of barnWalls){
+    const steps = Math.max(2, Math.ceil(Math.max(hw, hd) * 2 / 0.9));
+    for (let s=0; s<=steps; s++){
+      const t = steps === 0 ? 0 : (s/steps)*2 - 1;
+      const px = lx + (hw > hd ? t*hw : 0);
+      const pz = lz + (hd > hw ? t*hd : 0);
+      const wx = barn.position.x + px*cos + pz*sin;
+      const wz = barn.position.z - px*sin + pz*cos;
+      const r = (hw > hd ? hd : hw) + 0.15;
+      occluders.push({ x: wx, z: wz, r });
+      obstacles.push({ x: wx, z: wz, r, tall: true });
+    }
+  }
+  const hayMat = new THREE.MeshStandardMaterial({ color:0xc9a94f, roughness:1.0, flatShading:true });
+  const hayGeo = new THREE.CylinderGeometry(1.05, 1.05, 1.8, 14);
+  hayGeo.rotateZ(Math.PI/2);
+  const hayPositions = [
+    [-8, 6], [-4, 9], [3, 11], [9, 8], [11, 2], [-11, -3], [6, -8], [-6, -10], [22, 22], [-20, 26]
+  ];
+  for (const [hx, hz] of hayPositions){
+    const m = new THREE.Mesh(hayGeo, hayMat);
+    m.position.set(hx, 1.05, hz);
+    m.rotation.y = rnd()*Math.PI;
+    m.castShadow = true; m.receiveShadow = true;
+    scene.add(m);
+    obstacles.push({ x: hx, z: hz, r: 1.3, tall: false });
+  }
+  const crateMat = new THREE.MeshStandardMaterial({ color:0x8a6a42, roughness:0.9, flatShading:true });
+  const crateGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+  for (let i=0;i<10;i++){
+    const cx = rr(-WORLD+8, WORLD-8);
+    const cz = rr(-WORLD+8, WORLD-8);
+    if (Math.hypot(cx-SPAWN.x, cz-SPAWN.z) < 8) continue;
+    if (Math.hypot(cx-EXIT.x,  cz-EXIT.z)  < 8) continue;
+    const s = rr(0.85, 1.35);
+    const m = new THREE.Mesh(crateGeo, crateMat);
+    m.position.set(cx, 0.75*s, cz);
+    m.scale.setScalar(s);
+    m.rotation.y = rnd()*Math.PI;
+    m.castShadow = true; m.receiveShadow = true;
+    scene.add(m);
+    obstacles.push({ x: cx, z: cz, r: 1.15*s, tall: false });
+  }
+  const logMat = new THREE.MeshStandardMaterial({ color:0x4c3a2a, roughness:0.98, flatShading:true });
+  const logGeo = new THREE.CylinderGeometry(0.42, 0.5, 5.5, 9);
+  logGeo.rotateZ(Math.PI/2);
+  for (let i=0;i<14;i++){
+    const lx = rr(-WORLD+6, WORLD-6);
+    const lz = rr(-WORLD+6, WORLD-6);
+    if (Math.hypot(lx-SPAWN.x, lz-SPAWN.z) < 9) continue;
+    if (Math.hypot(lx-EXIT.x,  lz-EXIT.z)  < 9) continue;
+    const m = new THREE.Mesh(logGeo, logMat);
+    m.position.set(lx, 0.44, lz);
+    m.rotation.y = rnd()*Math.PI;
+    m.castShadow = true; m.receiveShadow = true;
+    scene.add(m);
+    obstacles.push({ x: lx, z: lz, r: 1.6, tall: false });
+  }
+}
+
+/* =====================================================================
+   EXIT GATE
+   ===================================================================== */
+let exitGlow, exitBeam;
+{
+  const g = new THREE.Group();
+  g.position.copy(EXIT);
+  scene.add(g);
+  const stoneMat = new THREE.MeshStandardMaterial({ color:0x8f8f88, roughness:0.9, flatShading:true });
+  const pillarGeo = new THREE.BoxGeometry(1.3, 6, 1.3);
+  for (const sx of [-2.9, 2.9]){
+    const p = new THREE.Mesh(pillarGeo, stoneMat);
+    p.position.set(sx, 3, 0);
+    p.castShadow = true; p.receiveShadow = true;
+    g.add(p);
+  }
+  const lintel = new THREE.Mesh(new THREE.BoxGeometry(7.6, 1.1, 1.5), stoneMat);
+  lintel.position.set(0, 6.5, 0);
+  lintel.castShadow = true; lintel.receiveShadow = true;
+  g.add(lintel);
+  const portalMat = new THREE.MeshBasicMaterial({
+    color: 0x7dffb0, transparent: true, opacity: 0.22,
+    side: THREE.DoubleSide, depthWrite: false
+  });
+  const portal = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 6.0), portalMat);
+  portal.position.set(0, 3.0, 0);
+  g.add(portal);
+  exitGlow = portal;
+  const beamMat = new THREE.MeshBasicMaterial({
+    color: 0x8effc0, transparent: true, opacity: 0.10,
+    depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending
+  });
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 2.2, 90, 12, 1, true), beamMat);
+  beam.position.set(0, 45, 0);
+  g.add(beam);
+  exitBeam = beam;
+  const pl = new THREE.PointLight(0x8effc0, 14, 26, 2.0);
+  pl.position.set(0, 3.4, 0);
+  g.add(pl);
+  obstacles.push({ x: EXIT.x - 2.9, z: EXIT.z, r: 1.0, tall: true });
+  obstacles.push({ x: EXIT.x + 2.9, z: EXIT.z, r: 1.0, tall: true });
+}
+
+/* =====================================================================
+   COW
+   ===================================================================== */
+const LEG_LEN = 1.0;
+function createCow(){
+  const root = new THREE.Group();
+  const hideMat = new THREE.MeshStandardMaterial({ color:0xf4f1e6, roughness:0.72, metalness:0.02 });
+  const spotMat = new THREE.MeshStandardMaterial({ color:0x231e1b, roughness:0.8 });
+  const pinkMat = new THREE.MeshStandardMaterial({ color:0xe79aa4, roughness:0.6 });
+  const hornMat = new THREE.MeshStandardMaterial({ color:0xd9cfa6, roughness:0.42 });
+  const hoofMat = new THREE.MeshStandardMaterial({ color:0x2b2622, roughness:0.45 });
+  const body = new THREE.Group();
+  root.add(body);
+
+  const torsoGeo = new THREE.CapsuleGeometry(0.58, 1.20, 8, 18);
+  torsoGeo.rotateX(Math.PI/2);
+  const torso = new THREE.Mesh(torsoGeo, hideMat);
+  torso.scale.set(0.95, 0.92, 1.0);
+  torso.castShadow = true; torso.receiveShadow = true;
+  body.add(torso);
+
+  const spotGeo = new THREE.SphereGeometry(0.32, 12, 10);
+  const spots = [
+    [ 0.50, 0.28,  0.35, 1.0, 0.22, 1.2, 0.0, 0.0, -0.5],
+    [-0.46, 0.30, -0.30, 0.9, 0.20, 1.0, 0.0, 0.0,  0.5],
+    [ 0.36, -0.30,-0.55, 0.85,0.20, 0.9, 0.0, 0.0, -0.4],
+    [-0.50, 0.05,  0.72, 0.75,0.20, 0.8, 0.0, 0.0,  0.6],
+    [ 0.20, 0.46, -0.90, 0.7, 0.18, 0.8, 0.0, 0.0,  0.0],
+  ];
+  for (const [x,y,z,sx,sy,sz,rx,ry,rz] of spots){
+    const m = new THREE.Mesh(spotGeo, spotMat);
+    m.position.set(x,y,z);
+    m.scale.set(sx,sy,sz);
+    m.rotation.set(rx,ry,rz);
+    m.castShadow = true;
+    body.add(m);
+  }
+
+  const udder = new THREE.Mesh(new THREE.SphereGeometry(0.26, 14, 10), pinkMat);
+  udder.position.set(0, -0.48, -0.35);
+  udder.scale.set(1, 0.8, 1.3);
+  udder.castShadow = true;
+  body.add(udder);
+
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.34, 0.6, 12), hideMat);
+  neck.position.set(0, 0.30, 1.02);
+  neck.rotation.x = -0.55;
+  neck.castShadow = true;
+  body.add(neck);
+
+  const head = new THREE.Group();
+  head.position.set(0, 0.52, 1.36);
+  body.add(head);
+
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.40, 18, 14), hideMat);
+  skull.scale.set(0.86, 0.82, 1.0);
+  skull.castShadow = true; skull.receiveShadow = true;
+  head.add(skull);
+
+  const snout = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.34, 0.46), hideMat);
+  snout.position.set(0, -0.10, 0.36);
+  snout.castShadow = true;
+  head.add(snout);
+
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), pinkMat);
+  nose.position.set(0, -0.10, 0.58);
+  nose.scale.set(1.3, 0.9, 0.7);
+  head.add(nose);
+
+  for (const s of [-1, 1]){
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 10),
+      new THREE.MeshStandardMaterial({ color:0x0d0b0a, roughness:0.15 }));
+    eye.position.set(0.22*s, 0.10, 0.24);
+    head.add(eye);
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), hideMat);
+    ear.position.set(0.38*s, 0.16, -0.05);
+    ear.scale.set(1.3, 0.55, 0.75);
+    ear.rotation.z = 0.5*s;
+    ear.castShadow = true;
+    head.add(ear);
+    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.26, 8), hornMat);
+    horn.position.set(0.24*s, 0.36, 0.06);
+    horn.rotation.z = -0.7*s;
+    horn.rotation.x = -0.25;
+    horn.castShadow = true;
+    head.add(horn);
+  }
+
+  const legs = [];
+  const legDefs = [
+    [-0.40,  0.70], [ 0.40,  0.70],
+    [-0.44, -0.75], [ 0.44, -0.75],
+  ];
+  const upperLegGeo = new THREE.CylinderGeometry(0.175, 0.13, 0.50, 8);
+  upperLegGeo.translate(0, -0.25, 0);
+  const lowerLegGeo = new THREE.CylinderGeometry(0.095, 0.085, 0.50, 8);
+  lowerLegGeo.translate(0, -0.75, 0);
+  const hoofCapGeo = new THREE.CylinderGeometry(0.115, 0.12, 0.12, 8);
+  hoofCapGeo.translate(0, -0.94, 0);
+
+  for (const [lx, lz] of legDefs){
+    const g = new THREE.Group();
+    g.position.set(lx, LEG_LEN, lz);
+    root.add(g);
+    const haunch = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 10), hideMat);
+    haunch.position.y = 0.02;
+    haunch.scale.set(1.05, 0.75, 1.05);
+    haunch.castShadow = true; haunch.receiveShadow = true;
+    g.add(haunch);
+    const upper = new THREE.Mesh(upperLegGeo, hideMat);
+    upper.castShadow = true; upper.receiveShadow = true;
+    g.add(upper);
+    const lower = new THREE.Mesh(lowerLegGeo, hideMat);
+    lower.castShadow = true; lower.receiveShadow = true;
+    g.add(lower);
+    const hoof = new THREE.Mesh(hoofCapGeo, hoofMat);
+    hoof.castShadow = true; hoof.receiveShadow = true;
+    g.add(hoof);
+    legs.push(g);
+  }
+
+  const tail = new THREE.Group();
+  tail.position.set(0, 0.32, -1.18);
+  body.add(tail);
+  const tailSeg = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.03, 0.75, 6), hideMat);
+  tailSeg.position.y = -0.36;
+  tail.add(tailSeg);
+  const tuft = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), spotMat);
+  tuft.position.y = -0.78;
+  tuft.scale.set(0.8, 1.5, 0.8);
+  tail.add(tuft);
+
+  root.scale.setScalar(0.86);
+
+  let walkPhase = 0;
+  return {
+    group: root,
+    update(dt, speed, crouchT, t){
+      const hipY = THREE.MathUtils.lerp(1.0, 0.54, crouchT);
+      body.position.y = hipY + 0.46;
+      for (const g of legs){
+        g.position.y = hipY;
+        g.scale.y = Math.max(0.12, hipY / LEG_LEN);
+      }
+      const moveAmt = clamp(speed / 8.0, 0, 1);
+      walkPhase += dt * (2.4 + speed * 1.85);
+      const amp = moveAmt * 0.60;
+      const swing = Math.sin(walkPhase);
+      legs[0].rotation.x =  swing * amp;
+      legs[3].rotation.x =  swing * amp;
+      legs[1].rotation.x = -swing * amp;
+      legs[2].rotation.x = -swing * amp;
+      body.position.y += Math.abs(Math.sin(walkPhase)) * 0.045 * moveAmt;
+      body.rotation.z = Math.sin(walkPhase) * 0.035 * moveAmt;
+      body.rotation.x = -moveAmt * 0.045;
+      const idle = (1 - moveAmt);
+      head.rotation.x = Math.sin(walkPhase * 2) * 0.05 * moveAmt
+                      + Math.sin(t * 0.9) * 0.05 * idle
+                      + crouchT * 0.18;
+      head.rotation.z = Math.sin(walkPhase) * 0.06 * moveAmt;
+      tail.rotation.z = Math.sin(t * 2.6) * 0.28 + Math.sin(walkPhase) * 0.12;
+      tail.rotation.x = Math.sin(t * 1.7) * 0.12;
+    }
+  };
+}
+
+/* =====================================================================
+   BEAR HUNTER
+   ===================================================================== */
+function createBear(){
+  const root = new THREE.Group();
+  const furMat  = new THREE.MeshStandardMaterial({ color:0x4a3423, roughness:0.96 });
+  const furLite = new THREE.MeshStandardMaterial({ color:0x6d4e36, roughness:0.95 });
+  const darkMat = new THREE.MeshStandardMaterial({ color:0x1c1510, roughness:0.85 });
+  const metalMat= new THREE.MeshStandardMaterial({ color:0x1b1d21, roughness:0.32, metalness:0.92 });
+  const woodMat = new THREE.MeshStandardMaterial({ color:0x5c3d24, roughness:0.85 });
+  const eyeMat  = new THREE.MeshStandardMaterial({ color:0xffcc44, emissive:0xff7a00, emissiveIntensity:2.4 });
+
+  const torsoGeo = new THREE.CapsuleGeometry(0.50, 0.72, 8, 16);
+  const torso = new THREE.Mesh(torsoGeo, furMat);
+  torso.position.y = 1.60;
+  torso.scale.set(1.0, 1.0, 0.85);
+  torso.castShadow = true; torso.receiveShadow = true;
+  root.add(torso);
+
+  const chest = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 12), furLite);
+  chest.position.set(0, 1.55, 0.30);
+  chest.scale.set(1.05, 1.15, 0.7);
+  chest.castShadow = true;
+  root.add(chest);
+
+  for (const s of [-1, 1]){
+    const sh = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 10), furMat);
+    sh.position.set(0.44*s, 1.94, 0);
+    sh.castShadow = true;
+    root.add(sh);
+  }
+
+  const head = new THREE.Group();
+  head.position.set(0, 2.22, 0.06);
+  root.add(head);
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.39, 18, 14), furMat);
+  skull.scale.set(1.0, 0.94, 1.06);
+  skull.castShadow = true;
+  head.add(skull);
+  const snout = new THREE.Mesh(new THREE.BoxGeometry(0.33, 0.27, 0.42), furLite);
+  snout.position.set(0, -0.10, 0.40);
+  snout.castShadow = true;
+  head.add(snout);
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 10), darkMat);
+  nose.position.set(0, -0.06, 0.60);
+  nose.scale.set(1.3, 0.9, 0.8);
+  head.add(nose);
+  for (const s of [-1, 1]){
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.145, 12, 10), furMat);
+    ear.position.set(0.30*s, 0.33, -0.02);
+    ear.castShadow = true;
+    head.add(ear);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.062, 12, 10), eyeMat);
+    eye.position.set(0.155*s, 0.06, 0.33);
+    head.add(eye);
+  }
+
+  const rightArm = new THREE.Group();
+  rightArm.position.set(0.46, 1.90, 0.06);
+  root.add(rightArm);
+  const rUpper = new THREE.Mesh(new THREE.CapsuleGeometry(0.15, 0.48, 6, 10), furMat);
+  rUpper.position.y = -0.34;
+  rUpper.castShadow = true;
+  rightArm.add(rUpper);
+  const rFore = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.42, 6, 10), furLite);
+  rFore.position.set(0.02, -0.78, 0.22);
+  rFore.rotation.x = -0.9;
+  rFore.castShadow = true;
+  rightArm.add(rFore);
+
+  const leftArm = new THREE.Group();
+  leftArm.position.set(-0.46, 1.90, 0.06);
+  root.add(leftArm);
+  const lUpper = new THREE.Mesh(new THREE.CapsuleGeometry(0.15, 0.48, 6, 10), furMat);
+  lUpper.position.y = -0.34;
+  lUpper.castShadow = true;
+  leftArm.add(lUpper);
+  const lFore = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.42, 6, 10), furLite);
+  lFore.position.set(-0.02, -0.78, 0.22);
+  lFore.rotation.x = -0.9;
+  lFore.castShadow = true;
+  leftArm.add(lFore);
+
+  const gun = new THREE.Group();
+  gun.position.set(0.10, 1.28, 0.56);
+  gun.rotation.x = -0.06;
+  root.add(gun);
+  const stock = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.16, 0.62), woodMat);
+  stock.position.set(0, 0, -0.24);
+  stock.castShadow = true;
+  gun.add(stock);
+  const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.15, 0.44), metalMat);
+  receiver.position.set(0, 0.02, 0.16);
+  receiver.castShadow = true;
+  gun.add(receiver);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.038, 0.86, 10), metalMat);
+  barrel.rotation.x = Math.PI/2;
+  barrel.position.set(0, 0.03, 0.78);
+  barrel.castShadow = true;
+  gun.add(barrel);
+  const scope = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.30, 10), metalMat);
+  scope.rotation.x = Math.PI/2;
+  scope.position.set(0, 0.14, 0.18);
+  scope.castShadow = true;
+  gun.add(scope);
+
+  const muzzle = new THREE.Object3D();
+  muzzle.position.set(0, 0.03, 1.22);
+  gun.add(muzzle);
+
+  const flash = new THREE.Mesh(
+    new THREE.SphereGeometry(0.22, 10, 8),
+    new THREE.MeshBasicMaterial({ color:0xffd27a, transparent:true, opacity:0.0, depthWrite:false })
+  );
+  flash.position.copy(muzzle.position);
+  gun.add(flash);
+  const flashLight = new THREE.PointLight(0xffb347, 0, 16, 2.0);
+  flashLight.position.copy(muzzle.position);
+  gun.add(flashLight);
+
+  const legGeo = new THREE.CapsuleGeometry(0.185, 0.62, 6, 10);
+  const footGeo = new THREE.BoxGeometry(0.32, 0.16, 0.52);
+  const legs = [];
+  for (const s of [-1, 1]){
+    const g = new THREE.Group();
+    g.position.set(0.26*s, 1.10, 0);
+    const up = new THREE.Mesh(legGeo, furMat);
+    up.position.y = -0.42;
+    up.castShadow = true;
+    g.add(up);
+    const foot = new THREE.Mesh(footGeo, darkMat);
+    foot.position.set(0, -0.90, 0.10);
+    foot.castShadow = true;
+    g.add(foot);
+    root.add(g);
+    legs.push(g);
+  }
+
+  let walkPhase = 0;
+  return {
+    group: root,
+    muzzle, flash, flashLight,
+    update(dt, speed, t){
+      walkPhase += dt * (2.0 + speed * 1.9);
+      const amp = clamp(speed/5.2, 0, 1) * 0.62;
+      const sw = Math.sin(walkPhase);
+      legs[0].rotation.x =  sw * amp;
+      legs[1].rotation.x = -sw * amp;
+      rightArm.rotation.x = -sw * amp * 0.45 - 0.35;
+      leftArm.rotation.x  =  sw * amp * 0.45 - 0.35;
+      torso.position.y = 1.60 + Math.abs(Math.sin(walkPhase)) * 0.05 * (amp*1.6);
+      torso.rotation.z = Math.sin(walkPhase) * 0.045 * (amp*1.6);
+      head.rotation.x = Math.sin(walkPhase*2) * 0.05 * (amp*1.6);
+      head.rotation.y = Math.sin(t * 0.7) * 0.12 * (1 - amp*1.6);
+      if (flash.material.opacity > 0){
+        flash.material.opacity = Math.max(0, flash.material.opacity - dt * 9);
+        flashLight.intensity = Math.max(0, flashLight.intensity - dt * 90);
+        flash.scale.setScalar(1 + (1 - flash.material.opacity) * 1.5);
+      }
+    }
+  };
+}
+
+/* =====================================================================
+   PLAYER STATE
+   ===================================================================== */
+const player = {
+  pos: SPAWN.clone(),
+  yaw: Math.PI,
+  crouchT: 0,
+  crouching: false,
+  inBush: false,
+  stamina: 100,
+  health: 100,
+  alive: true,
+  lastDamage: -99
+};
+
+const cow = createCow();
+cow.group.position.copy(player.pos);
+cow.group.rotation.y = player.yaw;
+scene.add(cow.group);
+
+/* =====================================================================
+   GAME MODE + MULTIPLAYER STATE
+   ===================================================================== */
+let gameMode = 'single';           // 'single' | 'multi'
+let multiConfig = { bears: 2, cows: 3 };
+
+const hunters = [];                // [{ bear, data }]
+const aiCows  = [];                // [{ cow, pos, yaw, state, wanderTarget, wanderTimer, crouchT, health, alive, inBush }]
+
+/* ---- create a single hunter ---- */
+function createHunter(startPos, startRot){
+  const bear = createBear();
+  bear.group.position.copy(startPos);
+  bear.group.rotation.y = startRot || 0;
+  scene.add(bear.group);
+
+  // Give each bear a slightly offset waypoint loop so they don't overlap
+  const ox = rr(-5, 5);
+  const oz = rr(-5, 5);
+  const waypoints = [
+    new THREE.Vector3(-35 + ox, 0,  35 + oz),
+    new THREE.Vector3(  0 + ox, 0,  35 + oz),
+    new THREE.Vector3( 35 + ox, 0,  35 + oz),
+    new THREE.Vector3( 35 + ox, 0,   0 + oz),
+    new THREE.Vector3( 35 + ox, 0, -35 + oz),
+    new THREE.Vector3(  0 + ox, 0, -35 + oz),
+    new THREE.Vector3(-35 + ox, 0, -35 + oz),
+    new THREE.Vector3(-35 + ox, 0,   0 + oz),
+    new THREE.Vector3(-35 + ox, 0,  35 + oz),
+    new THREE.Vector3(  0 + ox, 0,   0 + oz),
+  ];
+
+  return {
+    bear,
+    data: {
+      state: 'patrol',
+      detect: 0,
+      lastSeen: -99,
+      lastKnown: new THREE.Vector3(),
+      waypoints,
+      wpIndex: 0,
+      searchTimer: 0,
+      shootCooldown: 0,
+      viewRange: 40,
+      fov: 82,
+    }
+  };
+}
+
+/* ---- create a single AI cow ---- */
+function createAICow(startPos){
+  const c = createCow();
+  c.group.position.copy(startPos);
+  c.group.rotation.y = Math.random() * Math.PI * 2;
+  // Distinct tint so AI cows read as "other players" and not duplicates of you
+  c.group.traverse(obj => {
+    if (obj.isMesh && obj.material && obj.material.color && obj.material.color.getHex() === 0xf4f1e6){
+      obj.material = obj.material.clone();
+      obj.material.color.setHex(0xe6d9b8);
+    }
+  });
+  scene.add(c.group);
+
+  return {
+    cow: c,
+    pos: startPos.clone(),
+    yaw: c.group.rotation.y,
+    state: 'wander',
+    wanderTarget: null,
+    wanderTimer: rr(0, 3),
+    crouchT: 0,
+    health: 100,
+    alive: true,
+    inBush: false,
+  };
+}
+
+/* ---- clear all hunters and AI cows ---- */
+function clearActors(){
+  for (const h of hunters) scene.remove(h.bear.group);
+  for (const a of aiCows)  scene.remove(a.cow.group);
+  hunters.length = 0;
+  aiCows.length = 0;
+}
+
+/* ---- spawn actors according to gameMode/multiConfig ---- */
+function spawnActors(){
+  clearActors();
+
+  const numBears = (gameMode === 'multi') ? multiConfig.bears : 1;
+  const numAI    = (gameMode === 'multi') ? (multiConfig.cows - 1) : 0;
+
+  // Hunter spawn positions: spread across the map
+  const hunterSpawns = [
+    new THREE.Vector3(-18, 0,  18),
+    new THREE.Vector3( 18, 0,  18),
+    new THREE.Vector3( 18, 0, -18),
+    new THREE.Vector3(-18, 0, -18),
+  ];
+
+  for (let i = 0; i < numBears; i++){
+    let pos = hunterSpawns[i % hunterSpawns.length].clone();
+    if (i >= hunterSpawns.length){
+      pos.x += rr(-8, 8);
+      pos.z += rr(-8, 8);
+    }
+    // Face roughly toward the map center so the player sees the silhouette
+    const rot = Math.atan2(-pos.x, -pos.z);
+    hunters.push(createHunter(pos, rot));
+  }
+
+  // AI cows: scatter them near the player spawn so the player
+  // immediately sees "teammates" at the start
+  for (let i = 0; i < numAI; i++){
+    let pos;
+    let tries = 0;
+    do {
+      const angle = rr(0, Math.PI * 2);
+      const radius = rr(4, 14);
+      pos = new THREE.Vector3(
+        SPAWN.x + Math.cos(angle) * radius,
+        0,
+        SPAWN.z + Math.sin(angle) * radius
+      );
+      resolveCollisions(pos, 1.0);
+      tries++;
+    } while (tries < 12 &&
+      (Math.abs(pos.x) > WORLD-3 || Math.abs(pos.z) > WORLD-3 ||
+       Math.hypot(pos.x - SPAWN.x, pos.z - SPAWN.z) < 3));
+    aiCows.push(createAICow(pos));
+  }
+
+  // Update HUD counter
+  updateCowCounter();
+}
+
+/* =====================================================================
+   PROJECTILES
+   ===================================================================== */
+const projectiles = [];
+const bulletGeo = new THREE.CapsuleGeometry(0.045, 0.5, 4, 6);
+bulletGeo.rotateX(Math.PI/2);
+const bulletMat = new THREE.MeshStandardMaterial({
+  color: 0xffe9a8, emissive: 0xffb020, emissiveIntensity: 3.0, roughness: 0.4
+});
+
+function spawnBullet(origin, dir){
+  const m = new THREE.Mesh(bulletGeo, bulletMat);
+  m.position.copy(origin);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), dir);
+  scene.add(m);
+  projectiles.push({ mesh: m, dir: dir.clone(), life: 2.2, speed: 62 });
+}
+
+/* =====================================================================
+   LINE OF SIGHT
+   ===================================================================== */
+function segmentCircle(ax, az, bx, bz, cx, cz, r){
+  const dx = bx - ax, dz = bz - az;
+  const fx = ax - cx, fz = az - cz;
+  const a = dx*dx + dz*dz;
+  if (a < 1e-6) return false;
+  const b = 2*(fx*dx + fz*dz);
+  const c = fx*fx + fz*fz - r*r;
+  let disc = b*b - 4*a*c;
+  if (disc < 0) return false;
+  disc = Math.sqrt(disc);
+  const t1 = (-b - disc) / (2*a);
+  const t2 = (-b + disc) / (2*a);
+  if (t1 >= 0 && t1 <= 1) return true;
+  if (t2 >= 0 && t2 <= 1) return true;
+  if (t1 < 0 && t2 > 1) return true;
+  return false;
+}
+function segmentSphere(p0, p1, center, radius){
+  const dx = p1.x - p0.x, dy = p1.y - p0.y, dz = p1.z - p0.z;
+  const fx = p0.x - center.x, fy = p0.y - center.y, fz = p0.z - center.z;
+  const a = dx*dx + dy*dy + dz*dz;
+  if (a < 1e-8) return false;
+  const b = 2*(fx*dx + fy*dy + fz*dz);
+  const c = fx*fx + fy*fy + fz*fz - radius*radius;
+  let disc = b*b - 4*a*c;
+  if (disc < 0) return false;
+  disc = Math.sqrt(disc);
+  const t1 = (-b - disc) / (2*a);
+  const t2 = (-b + disc) / (2*a);
+  if (t1 >= 0 && t1 <= 1) return true;
+  if (t2 >= 0 && t2 <= 1) return true;
+  if (t1 < 0 && t2 > 1) return true;
+  return false;
+}
+function hasLOS(ax, az, bx, bz){
+  const minX = Math.min(ax,bx) - 2, maxX = Math.max(ax,bx) + 2;
+  const minZ = Math.min(az,bz) - 2, maxZ = Math.max(az,bz) + 2;
+  for (let i=0;i<occluders.length;i++){
+    const o = occluders[i];
+    if (o.x < minX || o.x > maxX || o.z < minZ || o.z > maxZ) continue;
+    if (segmentCircle(ax, az, bx, bz, o.x, o.z, o.r * 0.95)) return false;
+  }
+  return true;
+}
+
+/* =====================================================================
+   COLLISION
+   ===================================================================== */
+function resolveCollisions(p, radius){
+  for (let i=0;i<obstacles.length;i++){
+    const o = obstacles[i];
+    const dx = p.x - o.x, dz = p.z - o.z;
+    const d2 = dx*dx + dz*dz;
+    const rr2 = o.r + radius;
+    if (d2 < rr2*rr2 && d2 > 0.0004){
+      const d = Math.sqrt(d2);
+      const push = (rr2 - d) / d;
+      p.x += dx * push;
+      p.z += dz * push;
+    }
+  }
+  const L = WORLD - 1.2;
+  p.x = clamp(p.x, -L, L);
+  p.z = clamp(p.z, -L, L);
+}
+
+/* =====================================================================
+   CAMERA STATE
+   ===================================================================== */
+const cam = { yaw: 0, pitch: 0.32, dist: 7.0 };
+const camPos = new THREE.Vector3();
+const camTarget = new THREE.Vector3();
+
+/* =====================================================================
+   POST-PROCESSING
+   ===================================================================== */
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  0.42, 0.72, 0.86
+);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+/* =====================================================================
+   INPUT
+   ===================================================================== */
+const keys = {};
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+  if (e.code === 'Escape'){
+    if (settingsOpen) closeSettings();
+    else if (multiOpen) closeMultiMenu();
+  }
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+renderer.domElement.addEventListener('click', () => {
+  if (gameState === 'playing' && !document.pointerLockElement && !settingsOpen){
+    renderer.domElement.requestPointerLock();
+  }
+});
+document.addEventListener('pointerlockchange', () => {
+  const locked = document.pointerLockElement === renderer.domElement;
+  document.getElementById('hint').classList.toggle('on',
+    gameState === 'playing' && !locked && !settingsOpen && !multiOpen);
+});
+document.addEventListener('mousemove', e => {
+  if (document.pointerLockElement !== renderer.domElement) return;
+  cam.yaw   -= e.movementX * 0.0023;
+  cam.pitch  = clamp(cam.pitch + e.movementY * 0.0021, -0.22, 1.05);
+});
+
+/* =====================================================================
+   GAME STATE / UI
+   ===================================================================== */
+let gameState = 'menu';
+let paused = false;
+let settingsOpen = false;
+let multiOpen = false;
+const clock = new THREE.Clock();
+
+const ui = {
+  detectWrap: document.getElementById('detectWrap'),
+  detectFill: document.getElementById('detectFill'),
+  detectState: document.getElementById('detectState'),
+  hpFill: document.getElementById('hpFill'),
+  stFill: document.getElementById('stFill'),
+  hiddenTag: document.getElementById('hiddenTag'),
+  objSub: document.getElementById('objSub'),
+  objMain: document.getElementById('objMain'),
+  overlay: document.getElementById('overlay'),
+  damage: document.getElementById('damage'),
+  hint: document.getElementById('hint'),
+  compass: document.getElementById('compass'),
+  compassArrow: document.getElementById('compassArrow'),
+  fpsDisplay: document.getElementById('fpsDisplay'),
+  settingsOverlay: document.getElementById('settingsOverlay'),
+  multiOverlay: document.getElementById('multiOverlay'),
+  cowCounter: document.getElementById('cowCounter'),
+  cowCountNum: document.getElementById('cowCountNum'),
+  toast: document.getElementById('toast')
+};
+
+let toastTimer = null;
+function showToast(msg, type = 'bad'){
+  ui.toast.textContent = msg;
+  ui.toast.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => ui.toast.classList.remove('show'), 1800);
+}
+
+function updateCowCounter(){
+  const alive = aiCows.filter(c => c.alive).length + (player.alive ? 1 : 0);
+  ui.cowCountNum.textContent = alive;
+}
+
+function flashDamage(){
+  ui.damage.style.opacity = '0.85';
+  setTimeout(() => { ui.damage.style.opacity = '0'; }, 150);
+}
+
+function endGame(won){
+  gameState = won ? 'won' : 'lost';
+  document.exitPointerLock?.();
+  ui.overlay.classList.remove('hidden');
+  const modeLabel = gameMode === 'multi'
+    ? `${multiConfig.bears} hunter${multiConfig.bears>1?'s':''} • ${multiConfig.cows} cow${multiConfig.cows>1?'s':''}`
+    : 'Single Hunt';
+  ui.overlay.innerHTML = won
+    ? `<div id="resultTitle" class="win">ESCAPED</div>
+       <div id="resultSub">${modeLabel} — the hunter${multiConfig.bears>1?'s':''} lost the trail</div>
+       <div class="menuBtnRow">
+         <button class="menuBtn" id="startBtn">Run Again</button>
+         <button class="menuBtn secondary" id="multiBtnResult">Local Multiplayer</button>
+       </div>`
+    : `<div id="resultTitle" class="lose">CAUGHT</div>
+       <div id="resultSub">${modeLabel} — the hunt is over</div>
+       <div class="menuBtnRow">
+         <button class="menuBtn" id="startBtn">Try Again</button>
+         <button class="menuBtn secondary" id="multiBtnResult">Local Multiplayer</button>
+       </div>`;
+  document.getElementById('startBtn').addEventListener('click', () => {
+    if (gameMode === 'multi') startGame('multi', multiConfig);
+    else startGame('single');
+  });
+  document.getElementById('multiBtnResult').addEventListener('click', openMultiMenu);
+}
+
+/* =====================================================================
+   GAME START
+   ===================================================================== */
+function resetPlayer(){
+  player.pos.copy(SPAWN);
+  player.yaw = Math.PI;
+  player.crouchT = 0;
+  player.crouching = false;
+  player.stamina = 100;
+  player.health = 100;
+  player.alive = true;
+  cow.group.position.copy(player.pos);
+  cow.group.rotation.y = player.yaw;
+  cow.group.visible = true;
+}
+
+function clearProjectiles(){
+  for (const p of projectiles) scene.remove(p.mesh);
+  projectiles.length = 0;
+}
+
+function startGame(mode, config){
+  if (config) multiConfig = config;
+  gameMode = mode;
+
+  resetPlayer();
+  clearProjectiles();
+  spawnActors();
+
+  cam.yaw = 0;
+  cam.pitch = 0.32;
+
+  ui.overlay.classList.add('hidden');
+  ui.multiOverlay.classList.add('hidden');
+  multiOpen = false;
+
+  ui.cowCounter.classList.toggle('on', mode === 'multi');
+
+  gameState = 'playing';
+  clock.getDelta();
+  renderer.domElement.requestPointerLock();
+}
+
+/* =====================================================================
+   MULTIPLAYER MENU
+   ===================================================================== */
+function openMultiMenu(){
+  multiOpen = true;
+  ui.multiOverlay.classList.remove('hidden');
+  if (gameState === 'playing') paused = true;
+  try { document.exitPointerLock(); } catch (e) {}
+  document.getElementById('hint').classList.remove('on');
+}
+function closeMultiMenu(){
+  multiOpen = false;
+  ui.multiOverlay.classList.add('hidden');
+  if (gameState === 'playing'){
+    paused = false;
+    try {
+      const p = renderer.domElement.requestPointerLock();
+      if (p && p.catch) p.catch(() => {});
+    } catch (e) {}
+  } else if (gameState === 'menu'){
+    ui.overlay.classList.remove('hidden');
+  } else if (gameState === 'won' || gameState === 'lost'){
+    ui.overlay.classList.remove('hidden');
+  }
+}
+
+document.getElementById('startBtn').addEventListener('click', () => startGame('single'));
+document.getElementById('multiBtn').addEventListener('click', () => {
+  ui.overlay.classList.add('hidden');
+  openMultiMenu();
+});
+document.getElementById('multiClose').addEventListener('click', closeMultiMenu);
+document.getElementById('backToMenu').addEventListener('click', closeMultiMenu);
+
+const numBearsEl = document.getElementById('numBears');
+const numCowsEl  = document.getElementById('numCows');
+const numBearsValEl = document.getElementById('numBearsVal');
+const numCowsValEl  = document.getElementById('numCowsVal');
+
+numBearsEl.addEventListener('input', () => {
+  numBearsValEl.textContent = numBearsEl.value;
+  // Cows must always be at least 1 more than bears-1 for the player to have a chance
+  // Actually just enforce cows >= 2 (player + 1 AI)
+  const minCows = 2;
+  if (parseInt(numCowsEl.value) < minCows){
+    numCowsEl.value = minCows;
+    numCowsValEl.textContent = minCows;
+  }
+});
+numCowsEl.addEventListener('input', () => {
+  numCowsValEl.textContent = numCowsEl.value;
+});
+
+document.getElementById('startMulti').addEventListener('click', () => {
+  const bears = parseInt(numBearsEl.value);
+  const cows  = Math.max(2, parseInt(numCowsEl.value));
+  startGame('multi', { bears, cows });
+});
+
+/* =====================================================================
+   PLAYER UPDATE
+   ===================================================================== */
+function updatePlayer(dt, t){
+  if (!player.alive) return;
+  const wantCrouch = !!(keys['ControlLeft'] || keys['ControlRight'] || keys['KeyC']);
+  player.crouching = wantCrouch;
+  player.crouchT = THREE.MathUtils.damp(player.crouchT, wantCrouch ? 1 : 0, 9, dt);
+
+  const fwd = new THREE.Vector3(-Math.sin(cam.yaw), 0, -Math.cos(cam.yaw));
+  const right = new THREE.Vector3(Math.cos(cam.yaw), 0, -Math.sin(cam.yaw));
+
+  let f = 0, s = 0;
+  if (keys['KeyW'] || keys['ArrowUp'])    f += 1;
+  if (keys['KeyS'] || keys['ArrowDown'])  f -= 1;
+  if (keys['KeyD'] || keys['ArrowRight']) s += 1;
+  if (keys['KeyA'] || keys['ArrowLeft'])  s -= 1;
+
+  const move = new THREE.Vector3();
+  move.addScaledVector(fwd, f);
+  move.addScaledVector(right, s);
+  const moving = move.lengthSq() > 0.0001;
+  if (moving) move.normalize();
+
+  const wantSprint = (keys['ShiftLeft'] || keys['ShiftRight']) && f > 0 && !wantCrouch && player.stamina > 0.5;
+  let speed = wantCrouch ? 2.35 : 4.7;
+  if (wantSprint) speed = 8.4;
+
+  if (wantSprint && moving){
+    player.stamina = Math.max(0, player.stamina - 24 * dt);
+  } else {
+    player.stamina = Math.min(100, player.stamina + (wantCrouch ? 12 : 16) * dt);
+  }
+
+  if (moving){
+    player.pos.addScaledVector(move, speed * dt);
+    resolveCollisions(player.pos, 0.85);
+    const targetYaw = Math.atan2(move.x, move.z);
+    player.yaw = angleLerp(player.yaw, targetYaw, 1 - Math.pow(0.0008, dt));
+  }
+
+  player.inBush = false;
+  for (const b of bushes){
+    const dx = player.pos.x - b.x, dz = player.pos.z - b.z;
+    if (dx*dx + dz*dz < b.r*b.r){ player.inBush = true; break; }
+  }
+
+  cow.group.position.copy(player.pos);
+  cow.group.rotation.y = player.yaw;
+  cow.update(dt, moving ? speed : 0, player.crouchT, t);
+
+  if (Math.hypot(player.pos.x - EXIT.x, player.pos.z - EXIT.z) < 4.0){
+    endGame(true);
+  }
+}
+
+/* =====================================================================
+   AI COW UPDATE — flee from nearest hunter, otherwise wander
+   ===================================================================== */
+function updateAICow(ai, dt, t){
+  if (!ai.alive) return;
+
+  // Find nearest hunter
+  let nearest = null;
+  let nearestDist = Infinity;
+  for (const h of hunters){
+    const d = Math.hypot(ai.pos.x - h.bear.group.position.x, ai.pos.z - h.bear.group.position.z);
+    if (d < nearestDist){ nearestDist = d; nearest = h; }
+  }
+
+  if (nearest && nearestDist < 15){
+    // Flee directly away from nearest hunter
+    const ax = ai.pos.x - nearest.bear.group.position.x;
+    const az = ai.pos.z - nearest.bear.group.position.z;
+    const len = Math.hypot(ax, az) || 1;
+    const nx = ax / len, nz = az / len;
+    ai.pos.x += nx * 5.0 * dt;
+    ai.pos.z += nz * 5.0 * dt;
+    ai.yaw = Math.atan2(nx, nz);
+    ai.state = 'flee';
+    ai.crouchT = THREE.MathUtils.damp(ai.crouchT, 0, 9, dt);
+    ai.wanderTarget = null;
+    ai.wanderTimer = 0;
+  } else {
+    // Wander
+    ai.wanderTimer -= dt;
+    if (ai.wanderTimer <= 0 || !ai.wanderTarget){
+      ai.wanderTimer = rr(3, 7);
+      ai.wanderTarget = new THREE.Vector3(
+        rr(-WORLD + 6, WORLD - 6), 0, rr(-WORLD + 6, WORLD - 6)
+      );
+      // 35% chance to crouch when picking a new target
+      ai.crouchT = THREE.MathUtils.damp(ai.crouchT, rnd() < 0.35 ? 1 : 0, 9, dt);
+    }
+    if (ai.wanderTarget){
+      const dx = ai.wanderTarget.x - ai.pos.x;
+      const dz = ai.wanderTarget.z - ai.pos.z;
+      const d = Math.hypot(dx, dz);
+      if (d > 0.6){
+        const nx = dx / d, nz = dz / d;
+        ai.pos.x += nx * 2.0 * dt;
+        ai.pos.z += nz * 2.0 * dt;
+        ai.yaw = angleLerp(ai.yaw, Math.atan2(nx, nz), 1 - Math.pow(0.001, dt));
+      }
+      ai.state = 'wander';
+    }
+  }
+
+  // Collide with world
+  resolveCollisions(ai.pos, 0.85);
+
+  // Bush check
+  ai.inBush = false;
+  for (const b of bushes){
+    const dx = ai.pos.x - b.x, dz = ai.pos.z - b.z;
+    if (dx*dx + dz*dz < b.r*b.r){ ai.inBush = true; break; }
+  }
+
+  // Apply to model
+  ai.cow.group.position.copy(ai.pos);
+  ai.cow.group.rotation.y = ai.yaw;
+  cow.group.visible = true; // ensure visible logic doesn't accidentally hide
+  ai.cow.update(dt, ai.state === 'flee' ? 5.0 : 2.0, ai.crouchT, t);
+}
+
+/* =====================================================================
+   HUNTER UPDATE — one hunter's AI
+   ===================================================================== */
+function updateHunterAI(hunterObj, dt, t){
+  const h = hunterObj.data;
+  const bear = hunterObj.bear;
+  const hx = bear.group.position.x;
+  const hz = bear.group.position.z;
+
+  // Determine best target cow (player or AI) that this bear can see
+  let bestTarget = null;
+  let bestDist = Infinity;
+  let bestIsPlayer = false;
+
+  // Player
+  if (player.alive){
+    const dx = player.pos.x - hx, dz = player.pos.z - hz;
+    const d = Math.hypot(dx, dz);
+    if (d < h.viewRange){
+      const facing = new THREE.Vector3(Math.sin(bear.group.rotation.y), 0, Math.cos(bear.group.rotation.y));
+      const toP = new THREE.Vector3(dx, 0, dz);
+      if (toP.lengthSq() > 1e-5){
+        toP.normalize();
+        const ang = Math.acos(clamp(facing.dot(toP), -1, 1));
+        const halfFov = THREE.MathUtils.degToRad(h.fov * 0.5);
+        if (ang < halfFov || d < 3.5){
+          if (hasLOS(hx, hz, player.pos.x, player.pos.z)){
+            if (d < bestDist){ bestDist = d; bestTarget = { pos: player.pos, isPlayer: true, crouchT: player.crouchT, inBush: player.inBush }; bestIsPlayer = true; }
+          }
+        }
+      }
+    }
+  }
+
+  // AI cows
+  for (const ai of aiCows){
+    if (!ai.alive) continue;
+    const dx = ai.pos.x - hx, dz = ai.pos.z - hz;
+    const d = Math.hypot(dx, dz);
+    if (d >= h.viewRange) continue;
+    const facing = new THREE.Vector3(Math.sin(bear.group.rotation.y), 0, Math.cos(bear.group.rotation.y));
+    const toC = new THREE.Vector3(dx, 0, dz);
+    if (toC.lengthSq() < 1e-5) continue;
+    toC.normalize();
+    const ang = Math.acos(clamp(facing.dot(toC), -1, 1));
+    const halfFov = THREE.MathUtils.degToRad(h.fov * 0.5);
+    if (ang < halfFov || d < 3.5){
+      if (hasLOS(hx, hz, ai.pos.x, ai.pos.z)){
+        if (d < bestDist){ bestDist = d; bestTarget = { pos: ai.pos, isPlayer: false, crouchT: ai.crouchT, inBush: ai.inBush, ai }; bestIsPlayer = false; }
+      }
+    }
+  }
+
+  const sees = !!bestTarget;
+
+  // Update detection meter
+  if (sees){
+    let mult = 1.0;
+    if (bestTarget.inBush) mult *= (bestTarget.crouchT > 0.5 ? 0.13 : 0.48);
+    else if (bestTarget.crouchT > 0.5) mult *= 0.58;
+    mult *= clamp(1.55 - bestDist / h.viewRange, 0.18, 1.0);
+
+    h.detect = Math.min(1, h.detect + 1.45 * mult * dt);
+    h.lastSeen = t;
+    h.lastKnown.copy(bestTarget.pos);
+  } else {
+    h.detect = Math.max(0, h.detect - 0.55 * dt);
+  }
+
+  // State machine
+  if (h.detect >= 1){
+    if (h.state !== 'chase') h.state = 'chase';
+  } else if (h.state === 'chase'){
+    if (t - h.lastSeen > 5.0){
+      h.state = 'search';
+      h.searchTimer = 9.0;
+      h.searchTarget = h.lastKnown.clone();
+    }
+  } else if (h.state === 'search'){
+    h.searchTimer -= dt;
+    if (h.searchTimer <= 0) h.state = 'patrol';
+  }
+
+  // Behaviour
+  let desired = new THREE.Vector3();
+  let moveSpeed = 0;
+  let faceTarget = null;
+
+  if (h.state === 'patrol'){
+    const wp = h.waypoints[h.wpIndex];
+    desired.set(wp.x - hx, 0, wp.z - hz);
+    if (desired.length() < 2.5){
+      h.wpIndex = (h.wpIndex + 1) % h.waypoints.length;
+    } else {
+      desired.normalize();
+      moveSpeed = 3.2;
+    }
+    if (!faceTarget) faceTarget = Math.atan2(desired.x, desired.z);
+  }
+  else if (h.state === 'chase'){
+    const tgt = bestTarget ? bestTarget.pos : h.lastKnown;
+    desired.set(tgt.x - hx, 0, tgt.z - hz);
+    if (desired.length() > 1.2){
+      desired.normalize();
+      moveSpeed = 5.3;
+    } else {
+      desired.set(0,0,0);
+    }
+    faceTarget = Math.atan2(tgt.x - hx, tgt.z - hz);
+
+    h.shootCooldown -= dt;
+    if (sees && bestDist < 30 && h.shootCooldown <= 0){
+      h.shootCooldown = rr(1.05, 1.5);
+      shootAtTarget(hunterObj, bestTarget.pos, bestTarget.crouchT);
+    }
+  }
+  else if (h.state === 'search'){
+    if (!h.searchTarget) h.searchTarget = h.lastKnown.clone();
+    desired.set(h.searchTarget.x - hx, 0, h.searchTarget.z - hz);
+    if (desired.length() < 2.0){
+      const a = rnd() * Math.PI * 2;
+      const r = rr(6, 16);
+      h.searchTarget.set(
+        clamp(hx + Math.cos(a) * r, -WORLD + 4, WORLD - 4), 0,
+        clamp(hz + Math.sin(a) * r, -WORLD + 4, WORLD - 4)
+      );
+    } else {
+      desired.normalize();
+      moveSpeed = 3.5;
+    }
+    faceTarget = Math.atan2(desired.x, desired.z);
+  }
+
+  // Apply movement
+  const p = bear.group.position;
+  if (moveSpeed > 0 && desired.lengthSq() > 0){
+    p.x += desired.x * moveSpeed * dt;
+    p.z += desired.z * moveSpeed * dt;
+    resolveCollisions(p, 1.05);
+  }
+  if (faceTarget !== null && faceTarget !== undefined && !isNaN(faceTarget)){
+    bear.group.rotation.y = angleLerp(bear.group.rotation.y, faceTarget, 1 - Math.pow(0.0001, dt));
+  }
+  bear.update(dt, moveSpeed, t);
+}
+
+/* =====================================================================
+   SHOOTING
+   ===================================================================== */
+function shootAtTarget(hunterObj, targetPos, targetCrouchT){
+  const bear = hunterObj.bear;
+  const origin = new THREE.Vector3();
+  bear.muzzle.getWorldPosition(origin);
+
+  const target = targetPos.clone();
+  target.y = 1.05 - targetCrouchT * 0.35;
+
+  const dir = target.sub(origin).normalize();
+  const spread = 0.030;
+  dir.x += rr(-spread, spread);
+  dir.y += rr(-spread*0.7, spread*0.7);
+  dir.z += rr(-spread, spread);
+  dir.normalize();
+
+  spawnBullet(origin, dir);
+
+  bear.flash.material.opacity = 1.0;
+  bear.flash.scale.setScalar(1.0);
+  bear.flashLight.intensity = 26;
+}
+
+/* =====================================================================
+   PROJECTILE UPDATE
+   ===================================================================== */
+function updateProjectiles(dt){
+  for (let i = projectiles.length - 1; i >= 0; i--){
+    const b = projectiles[i];
+    b.life -= dt;
+    const oldPos = b.mesh.position.clone();
+    const step = b.speed * dt;
+    b.mesh.position.addScaledVector(b.dir, step);
+    const newPos = b.mesh.position;
+    let dead = b.life <= 0;
+
+    // Hit player?
+    if (!dead && player.alive){
+      const center = new THREE.Vector3(
+        player.pos.x,
+        1.0 - player.crouchT * 0.35,
+        player.pos.z
+      );
+      if (segmentSphere(oldPos, newPos, center, 0.95)){
+        damagePlayer(20);
+        dead = true;
+      }
+    }
+
+    // Hit AI cow?
+    if (!dead){
+      for (const ai of aiCows){
+        if (!ai.alive) continue;
+        const center = new THREE.Vector3(
+          ai.pos.x,
+          1.0 - ai.crouchT * 0.35,
+          ai.pos.z
+        );
+        if (segmentSphere(oldPos, newPos, center, 0.95)){
+          ai.health -= 35;
+          if (ai.health <= 0){
+            ai.alive = false;
+            ai.cow.group.visible = false;
+            showToast('Cow caught!', 'bad');
+            updateCowCounter();
+          }
+          dead = true;
+          break;
+        }
+      }
+    }
+
+    // Hit obstacle
+    if (!dead){
+      const bx = newPos.x, bz = newPos.z;
+      for (let j=0;j<obstacles.length;j++){
+        const o = obstacles[j];
+        const dx = bx - o.x, dz = bz - o.z;
+        if (dx*dx + dz*dz < o.r*o.r){ dead = true; break; }
+      }
+    }
+
+    if (!dead && newPos.y < 0.05){ newPos.y = 0.05; dead = true; }
+    if (dead){ scene.remove(b.mesh); projectiles.splice(i, 1); }
+  }
+}
+
+function damagePlayer(amount){
+  if (!player.alive) return;
+  player.health -= amount;
+  player.lastDamage = clock.elapsedTime;
+  flashDamage();
+  if (player.health <= 0){
+    player.health = 0;
+    player.alive = false;
+    cow.group.visible = false;
+    setTimeout(() => { if (gameState === 'playing') endGame(false); }, 450);
+  }
+}
+
+/* =====================================================================
+   CAMERA UPDATE
+   ===================================================================== */
+function updateCamera(dt){
+  const cp = Math.cos(cam.pitch);
+  const sp = Math.sin(cam.pitch);
+  const focus = new THREE.Vector3(
+    player.pos.x,
+    THREE.MathUtils.lerp(1.55, 1.05, player.crouchT),
+    player.pos.z
+  );
+  const offset = new THREE.Vector3(
+    Math.sin(cam.yaw) * cp,
+    sp,
+    Math.cos(cam.yaw) * cp
+  ).multiplyScalar(cam.dist);
+  const desiredPos = focus.clone().add(offset);
+  desiredPos.y = Math.max(desiredPos.y, 0.9);
+  const k = 1 - Math.pow(0.0016, dt);
+  camPos.lerp(desiredPos, k);
+  camTarget.lerp(focus, 1 - Math.pow(0.0005, dt));
+  camera.position.copy(camPos);
+  camera.lookAt(camTarget);
+}
+function updateMenuCamera(t){
+  const r = 12;
+  const a = t * 0.22;
+  camera.position.set(
+    SPAWN.x + Math.sin(a) * r,
+    4.2 + Math.sin(t * 0.5) * 0.6,
+    SPAWN.z + Math.cos(a) * r
+  );
+  camera.lookAt(SPAWN.x, 1.3, SPAWN.z);
+}
+
+/* =====================================================================
+   SUN FOLLOW
+   ===================================================================== */
+function updateSun(){
+  const px = player.pos.x, pz = player.pos.z;
+  sun.position.set(px + sunOffset.x, sunOffset.y, pz + sunOffset.z);
+  sun.target.position.set(px, 0, pz);
+  sun.target.updateMatrixWorld();
+}
+
+/* =====================================================================
+   COMPASS — points to nearest hunter
+   ===================================================================== */
+function updateCompass(){
+  let nearest = null;
+  let nearestDist = Infinity;
+  for (const h of hunters){
+    const dx = h.bear.group.position.x - player.pos.x;
+    const dz = h.bear.group.position.z - player.pos.z;
+    const d = Math.hypot(dx, dz);
+    if (d < nearestDist){ nearestDist = d; nearest = { dx, dz }; }
+  }
+  if (!nearest){
+    ui.compass.classList.remove('on');
+    return;
+  }
+  const fwdComp = -nearest.dx * Math.sin(cam.yaw) - nearest.dz * Math.cos(cam.yaw);
+  const rgtComp =  nearest.dx * Math.cos(cam.yaw) - nearest.dz * Math.sin(cam.yaw);
+  const screenAngle = Math.atan2(rgtComp, fwdComp);
+  ui.compassArrow.style.transform = `rotate(${screenAngle}rad)`;
+  ui.compass.classList.toggle('on', gameState === 'playing' && nearestDist < 60);
+}
+
+/* =====================================================================
+   HUD UPDATE — aggregate across all hunters
+   ===================================================================== */
+let hudAccum = 0;
+function updateHUD(dt){
+  hudAccum += dt;
+  if (hudAccum < 0.05) return;
+  hudAccum = 0;
+
+  let maxDetect = 0;
+  let anyChasing = false;
+  let anySearching = false;
+  for (const h of hunters){
+    if (h.data.detect > maxDetect) maxDetect = h.data.detect;
+    if (h.data.state === 'chase') anyChasing = true;
+    else if (h.data.state === 'search') anySearching = true;
+  }
+
+  ui.detectFill.style.width = (maxDetect * 100).toFixed(1) + '%';
+
+  let label, color;
+  if (maxDetect < 0.02)      { color = '#8ef0a8'; label = 'HIDDEN'; }
+  else if (maxDetect < 0.35) { color = '#8ef0a8'; label = 'UNAWARE'; }
+  else if (maxDetect < 0.7)  { color = '#ffcc55'; label = 'SUSPICIOUS'; }
+  else if (maxDetect < 1.0)  { color = '#ff8a3a'; label = 'CAUGHT THE SCENT'; }
+  else                       { color = '#ff4a3a'; label = 'ON YOUR TRAIL'; }
+
+  if (anyChasing)      { color = '#ff4a3a'; label = 'ON YOUR TRAIL'; }
+  else if (anySearching){ color = '#ff8a3a'; label = 'SEARCHING'; }
+
+  ui.detectFill.style.background = color;
+  ui.detectFill.style.color = color;
+  ui.detectState.textContent = label;
+  ui.detectState.style.color = color;
+  ui.detectWrap.classList.toggle('on', maxDetect > 0.02 || anyChasing || anySearching);
+
+  ui.hpFill.style.width = clamp(player.health, 0, 100) + '%';
+  ui.stFill.style.width = clamp(player.stamina, 0, 100) + '%';
+
+  const concealed = player.inBush && player.crouchT > 0.45;
+  ui.hiddenTag.classList.toggle('on', concealed);
+
+  const distToExit = Math.hypot(player.pos.x - EXIT.x, player.pos.z - EXIT.z);
+  if (gameMode === 'multi'){
+    const alive = aiCows.filter(c => c.alive).length + (player.alive ? 1 : 0);
+    ui.objSub.textContent = `GATE — ${Math.round(distToExit)} M • ${alive} COWS`;
+    ui.cowCountNum.textContent = alive;
+  } else {
+    ui.objSub.textContent = 'GATE — ' + Math.round(distToExit) + ' M';
+  }
+}
+
+/* =====================================================================
+   SETTINGS SYSTEM
+   ===================================================================== */
+const DEFAULT_SETTINGS = {
+  preset: 'high',
+  resolutionScale: 1.0,
+  shadows: true,
+  shadowSize: 2048,
+  bloom: true,
+  bloomStrength: 0.42,
+  grass: true,
+  fog: true,
+  fogDensity: 0.0135,
+  exposure: 1.05,
+  showFps: false
+};
+const PRESETS = {
+  low:    { resolutionScale: 0.60, shadows: false, shadowSize: 512,  bloom: false, bloomStrength: 0.30, grass: false, fog: false, fogDensity: 0.008, exposure: 1.00 },
+  medium: { resolutionScale: 0.80, shadows: true,  shadowSize: 1024, bloom: false, bloomStrength: 0.35, grass: true,  fog: true,  fogDensity: 0.010, exposure: 1.02 },
+  high:   { resolutionScale: 1.00, shadows: true,  shadowSize: 2048, bloom: true,  bloomStrength: 0.42, grass: true,  fog: true,  fogDensity: 0.0135, exposure: 1.05 },
+  ultra:  { resolutionScale: 1.00, shadows: true,  shadowSize: 2048, bloom: true,  bloomStrength: 0.65, grass: true,  fog: true,  fogDensity: 0.0135, exposure: 1.10 }
+};
+let settings = Object.assign({}, DEFAULT_SETTINGS);
+let currentShadowSize = 2048;
+let currentShadowsOn = true;
+
+function loadSettings(){
+  try {
+    const saved = localStorage.getItem('dulesim_settings');
+    if (saved){
+      const parsed = JSON.parse(saved);
+      settings = Object.assign({}, DEFAULT_SETTINGS, parsed);
+    }
+  } catch (e) {}
+}
+function saveSettings(){
+  try { localStorage.setItem('dulesim_settings', JSON.stringify(settings)); } catch (e) {}
+}
+function applyShadows(enabled, size){
+  renderer.shadowMap.enabled = enabled;
+  sun.castShadow = enabled;
+  if (enabled && (!currentShadowsOn || currentShadowSize !== size)){
+    if (sun.shadow.map){ sun.shadow.map.dispose(); sun.shadow.map = null; }
+    sun.shadow.mapSize.set(size, size);
+    currentShadowSize = size;
+  }
+  currentShadowsOn = enabled;
+}
+function applySettings(){
+  const s = settings;
+  const basePR = Math.min(window.devicePixelRatio || 1, 2);
+  const pr = basePR * s.resolutionScale;
+  renderer.setPixelRatio(pr);
+  composer.setPixelRatio(pr);
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h);
+  composer.setSize(w, h);
+  applyShadows(s.shadows, s.shadowSize);
+  bloom.enabled = s.bloom;
+  bloom.strength = s.bloomStrength;
+  if (grassMesh) grassMesh.visible = s.grass;
+  if (s.fog){ scene.fog = fogRef; fogRef.density = s.fogDensity; }
+  else scene.fog = null;
+  renderer.toneMappingExposure = s.exposure;
+  ui.fpsDisplay.style.display = s.showFps ? 'block' : 'none';
+  const rowSS = document.getElementById('rowShadowSize');
+  if (rowSS) rowSS.style.opacity = s.shadows ? '1' : '0.4';
+  const rowBS = document.getElementById('rowBloomStrength');
+  if (rowBS) rowBS.style.opacity = s.bloom ? '1' : '0.4';
+}
+function syncSettingsUI(){
+  document.getElementById('sResolution').value = Math.round(settings.resolutionScale * 100);
+  document.getElementById('vResolution').textContent = Math.round(settings.resolutionScale * 100) + '%';
+  document.getElementById('sShadows').checked = settings.shadows;
+  document.getElementById('sShadowSize').value = settings.shadowSize;
+  document.getElementById('sBloom').checked = settings.bloom;
+  document.getElementById('sBloomStrength').value = Math.round(settings.bloomStrength * 100);
+  document.getElementById('vBloomStrength').textContent = settings.bloomStrength.toFixed(2);
+  document.getElementById('sGrass').checked = settings.grass;
+  document.getElementById('sFog').checked = settings.fog;
+  document.getElementById('sExposure').value = Math.round(settings.exposure * 100);
+  document.getElementById('vExposure').textContent = settings.exposure.toFixed(2);
+  document.getElementById('sFps').checked = settings.showFps;
+  document.querySelectorAll('.presetBtn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.preset === settings.preset);
+  });
+}
+function applyPreset(name){
+  const p = PRESETS[name];
+  if (!p) return;
+  Object.assign(settings, p, { preset: name });
+  syncSettingsUI();
+  applySettings();
+  saveSettings();
+}
+function markCustom(){
+  settings.preset = 'custom';
+  document.querySelectorAll('.presetBtn').forEach(btn => btn.classList.remove('active'));
+}
+function openSettings(){
+  if (gameState === 'playing') paused = true;
+  settingsOpen = true;
+  ui.settingsOverlay.classList.remove('hidden');
+  try { document.exitPointerLock(); } catch (e) {}
+}
+function closeSettings(){
+  settingsOpen = false;
+  ui.settingsOverlay.classList.add('hidden');
+  if (gameState === 'playing'){
+    paused = false;
+    try {
+      const p = renderer.domElement.requestPointerLock();
+      if (p && p.catch) p.catch(() => {});
+    } catch (e) {}
+  }
+}
+
+document.getElementById('settingsBtn').addEventListener('click', openSettings);
+document.getElementById('settingsClose').addEventListener('click', closeSettings);
+
+document.querySelectorAll('.presetBtn').forEach(btn => {
+  btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+});
+
+document.getElementById('settingsReset').addEventListener('click', () => {
+  settings = Object.assign({}, DEFAULT_SETTINGS);
+  syncSettingsUI();
+  applySettings();
+  saveSettings();
+});
+
+document.getElementById('sResolution').addEventListener('input', e => {
+  settings.resolutionScale = parseInt(e.target.value) / 100;
+  document.getElementById('vResolution').textContent = e.target.value + '%';
+  markCustom(); applySettings(); saveSettings();
+});
+document.getElementById('sShadows').addEventListener('change', e => {
+  settings.shadows = e.target.checked; markCustom(); applySettings(); saveSettings();
+});
+document.getElementById('sShadowSize').addEventListener('change', e => {
+  settings.shadowSize = parseInt(e.target.value); markCustom(); applySettings(); saveSettings();
+});
+document.getElementById('sBloom').addEventListener('change', e => {
+  settings.bloom = e.target.checked; markCustom(); applySettings(); saveSettings();
+});
+document.getElementById('sBloomStrength').addEventListener('input', e => {
+  settings.bloomStrength = parseInt(e.target.value) / 100;
+  document.getElementById('vBloomStrength').textContent = settings.bloomStrength.toFixed(2);
+  markCustom(); applySettings(); saveSettings();
+});
+document.getElementById('sGrass').addEventListener('change', e => {
+  settings.grass = e.target.checked; markCustom(); applySettings(); saveSettings();
+});
+document.getElementById('sFog').addEventListener('change', e => {
+  settings.fog = e.target.checked; markCustom(); applySettings(); saveSettings();
+});
+document.getElementById('sExposure').addEventListener('input', e => {
+  settings.exposure = parseInt(e.target.value) / 100;
+  document.getElementById('vExposure').textContent = settings.exposure.toFixed(2);
+  markCustom(); applySettings(); saveSettings();
+});
+document.getElementById('sFps').addEventListener('change', e => {
+  settings.showFps = e.target.checked; markCustom(); applySettings(); saveSettings();
+});
+
+loadSettings();
+syncSettingsUI();
+applySettings();
+
+/* =====================================================================
+   FPS COUNTER
+   ===================================================================== */
+let fpsFrames = 0;
+let fpsAccum = 0;
+function updateFPS(dt){
+  fpsFrames++;
+  fpsAccum += dt;
+  if (fpsAccum >= 0.5){
+    if (settings.showFps){
+      const fps = Math.round(fpsFrames / fpsAccum);
+      ui.fpsDisplay.textContent = fps + ' FPS';
+    }
+    fpsFrames = 0;
+    fpsAccum = 0;
+  }
+}
+
+/* =====================================================================
+   MAIN LOOP
+   ===================================================================== */
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t  = clock.elapsedTime;
+
+  updateFPS(dt);
+
+  if (gameState === 'playing' && !paused){
+    updatePlayer(dt, t);
+    for (const h of hunters) updateHunterAI(h, dt, t);
+    for (const ai of aiCows) updateAICow(ai, dt, t);
+    updateProjectiles(dt);
+    updateCamera(dt);
+    updateHUD(dt);
+    updateCompass();
+  } else if (gameState === 'menu'){
+    updateMenuCamera(t);
+    cow.update(dt, 0, 0, t);
+    ui.compass.classList.remove('on');
+  } else {
+    updateProjectiles(dt);
+    updateCamera(dt);
+    for (const h of hunters) h.bear.update(dt, 0, t);
+    updateCompass();
+  }
+
+  updateSun();
+  if (grassMatRef && grassMatRef.userData.shader){
+    grassMatRef.userData.shader.uniforms.uTime.value = t;
+  }
+  if (exitGlow){
+    exitGlow.material.opacity = 0.16 + Math.sin(t * 1.8) * 0.07;
+    exitBeam.material.opacity = 0.07 + Math.sin(t * 1.3) * 0.035;
+  }
+  composer.render();
+}
+
+/* =====================================================================
+   RESIZE
+   ===================================================================== */
+window.addEventListener('resize', () => {
+  const w = window.innerWidth, h = window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+  composer.setSize(w, h);
+});
+
+/* =====================================================================
+   BOOT — spawn a single hunter + no AI cows so menu camera has something
+   ===================================================================== */
+spawnActors();
+camPos.set(SPAWN.x, 5, SPAWN.z + 12);
+camTarget.copy(SPAWN);
+animate();
+</script>
+</body>
+</html>
