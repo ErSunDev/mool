@@ -87,6 +87,7 @@
   .barFill{height:100%;width:100%;border-radius:4px;transition:width .12s linear;}
   #hpFill{background:linear-gradient(90deg,#ff4a3a,#ff8a6a);box-shadow:0 0 12px rgba(255,74,58,.6);}
   #stFill{background:linear-gradient(90deg,#7ad4ff,#bff0ff);box-shadow:0 0 12px rgba(122,212,255,.55);}
+  #sdFill{background:linear-gradient(90deg,#ffb547,#ffe08a);box-shadow:0 0 12px rgba(255,181,71,.6);}
   #hiddenTag{
     bottom:120px;left:22px;
     font-size:11px;letter-spacing:.28em;text-transform:uppercase;
@@ -100,7 +101,6 @@
   }
   #controls b{color:#d8ecdc;font-weight:600;}
 
-  /* Cow counter for multiplayer */
   #cowCounter{
     position:fixed;
     top:22px;left:22px;
@@ -117,6 +117,29 @@
   #cowCounter.on{display:block;}
   #cowCountNum{color:#8ef0a8;font-weight:700;font-size:13px;
     text-shadow:0 0 10px rgba(142,240,168,.6);margin-left:6px;}
+
+  /* Charge indicator */
+  #chargeWrap{
+    position:fixed;
+    bottom:118px;left:50%;transform:translateX(-50%);
+    width:200px;padding:7px 12px 9px;
+    background:linear-gradient(180deg, rgba(8,14,12,.78), rgba(8,14,12,.5));
+    border:1px solid rgba(255,181,71,.38);
+    border-radius:3px;
+    backdrop-filter:blur(6px);
+    opacity:0;transition:opacity .18s;
+    pointer-events:none;z-index:14;
+    box-shadow:0 4px 18px rgba(0,0,0,.5);
+  }
+  #chargeWrap.on{opacity:1;}
+  #chargeLabel{
+    font-size:9px;letter-spacing:.28em;text-transform:uppercase;
+    color:#ffb547;text-align:center;margin-bottom:6px;
+    text-shadow:0 0 10px rgba(255,181,71,.7);
+  }
+  #chargeBar{height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;}
+  #chargeFill{height:100%;width:0%;background:linear-gradient(90deg,#ff8a3a,#ffe08a);
+    box-shadow:0 0 14px currentColor;color:#ffb547;border-radius:3px;transition:width .04s linear;}
 
   /* Jump button */
   #jumpBtn{
@@ -145,6 +168,39 @@
     transform: scale(.9);
     box-shadow: 0 0 50px rgba(142,240,168,.85), inset 0 1px 0 rgba(255,255,255,.2);
     background:radial-gradient(circle at 32% 28%, rgba(200,255,220,.7), rgba(80,220,130,.6));
+  }
+
+  /* Charge (horn) button */
+  #chargeBtn{
+    position:fixed;
+    bottom:190px;right:22px;
+    width:74px;height:74px;
+    border-radius:50%;
+    background:radial-gradient(circle at 32% 28%, rgba(255,220,140,.4), rgba(220,140,40,.55));
+    border:2px solid rgba(255,181,71,.85);
+    color:#fff5e0;
+    font-size:10px;letter-spacing:.14em;font-weight:700;
+    text-transform:uppercase;
+    cursor:pointer;
+    z-index:16;
+    pointer-events:auto;
+    display:none;
+    align-items:center;justify-content:center;
+    transition: transform .1s, box-shadow .15s, background .15s;
+    box-shadow: 0 0 22px rgba(255,181,71,.4), inset 0 1px 0 rgba(255,255,255,.15);
+    touch-action: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #chargeBtn.on{display:flex;}
+  #chargeBtn.pressed, #chargeBtn:active{
+    transform: scale(.9);
+    box-shadow: 0 0 55px rgba(255,181,71,.9), inset 0 1px 0 rgba(255,255,255,.25);
+    background:radial-gradient(circle at 32% 28%, rgba(255,235,180,.85), rgba(255,170,60,.75));
+  }
+  #chargeBtn.cooling{
+    filter: grayscale(.7) brightness(.65);
+    cursor: not-allowed;
   }
 
   #fpsDisplay{
@@ -182,7 +238,6 @@
     box-shadow:0 0 20px rgba(142,240,168,.4);
   }
 
-  /* Toast */
   #toast{
     position:fixed;
     top:130px;left:50%;transform:translateX(-50%);
@@ -197,8 +252,8 @@
   }
   #toast.show{opacity:1;}
   #toast.good{background:rgba(90,214,138,.92);}
+  #toast.gold{background:rgba(255,181,71,.95);color:#1a0e00;}
 
-  /* Settings overlay */
   #settingsOverlay{
     position:fixed;inset:0;z-index:40;
     background:rgba(2,4,3,.82);
@@ -325,7 +380,6 @@
   }
   #settingsReset:hover{background:rgba(255,138,58,.12);border-color:#ff8a3a;}
 
-  /* Multiplayer Menu */
   #multiOverlay{
     position:fixed;inset:0;z-index:32;
     background:radial-gradient(ellipse at center, rgba(4,9,7,.85) 0%, rgba(2,4,3,.97) 70%);
@@ -416,7 +470,6 @@
   }
   #backToMenu:hover{background:rgba(142,240,168,.08);border-color:rgba(142,240,168,.42);color:#c8ecd2;}
 
-  /* Main menu overlay */
   #overlay{
     position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;
     align-items:center;justify-content:center;text-align:center;
@@ -499,6 +552,7 @@
   <div id="status" class="panel">
     <div class="statRow"><span class="statLabel">Health</span><div class="bar"><div class="barFill" id="hpFill"></div></div></div>
     <div class="statRow"><span class="statLabel">Stam</span><div class="bar"><div class="barFill" id="stFill"></div></div></div>
+    <div class="statRow"><span class="statLabel">Charge</span><div class="bar"><div class="barFill" id="sdFill"></div></div></div>
   </div>
 
   <div id="hiddenTag" class="panel">◈ CONCEALED</div>
@@ -509,10 +563,17 @@
     <div><b>SHIFT</b> — Sprint</div>
     <div><b>CTRL / C</b> — Crouch</div>
     <div><b>SPACE</b> — Jump</div>
+    <div><b>E</b> — Horn Charge</div>
     <div><b>ESC</b> — Release cursor</div>
   </div>
 </div>
 
+<div id="chargeWrap">
+  <div id="chargeLabel">Charging Horn</div>
+  <div id="chargeBar"><div id="chargeFill"></div></div>
+</div>
+
+<button id="chargeBtn">HORN</button>
 <button id="jumpBtn">JUMP</button>
 <div id="toast">Cow caught!</div>
 <div id="fpsDisplay">60 FPS</div>
@@ -564,7 +625,7 @@
     <div class="presetRow">
       <button class="presetBtn" data-preset="low">Low</button>
       <button class="presetBtn" data-preset="medium">Medium</button>
-      <button class="presetBtn active" data-preset="high">High</button>
+      <button class="presetBtn" data-preset="high">High</button>
       <button class="presetBtn" data-preset="ultra">Ultra</button>
     </div>
 
@@ -1347,7 +1408,8 @@ function createCow(){
   let walkPhase = 0;
   return {
     group: root,
-    update(dt, speed, crouchT, t, jumpT = 0, vy = 0){
+    head,
+    update(dt, speed, crouchT, t, jumpT = 0, vy = 0, headPitch = 0, chargeT = 0){
       const hipY = THREE.MathUtils.lerp(1.0, 0.54, crouchT);
       body.position.y = hipY + 0.46;
       for (const g of legs){
@@ -1363,7 +1425,6 @@ function createCow(){
       legs[1].rotation.x = -swing * amp;
       legs[2].rotation.x = -swing * amp;
 
-      // Tuck legs during jump for a natural leaping pose
       if (jumpT > 0.05){
         const tuck = clamp(Math.abs(vy) * 0.10 + jumpT * 0.4, 0, 0.75);
         legs[0].rotation.x += tuck * 0.55;
@@ -1374,12 +1435,16 @@ function createCow(){
 
       body.position.y += Math.abs(Math.sin(walkPhase)) * 0.045 * moveAmt;
       body.rotation.z = Math.sin(walkPhase) * 0.035 * moveAmt;
-      body.rotation.x = -moveAmt * 0.045 - jumpT * 0.08;
+      body.rotation.x = -moveAmt * 0.045 - jumpT * 0.08 + chargeT * 0.10;
+
+      // Charge: lower head as if lowering horns
       const idle = (1 - moveAmt);
       head.rotation.x = Math.sin(walkPhase * 2) * 0.05 * moveAmt
                       + Math.sin(t * 0.9) * 0.05 * idle
                       + crouchT * 0.18
-                      - jumpT * 0.15;
+                      - jumpT * 0.15
+                      + headPitch
+                      + chargeT * 0.35;
       head.rotation.z = Math.sin(walkPhase) * 0.06 * moveAmt;
       tail.rotation.z = Math.sin(t * 2.6) * 0.28 + Math.sin(walkPhase) * 0.12;
       tail.rotation.x = Math.sin(t * 1.7) * 0.12;
@@ -1551,7 +1616,7 @@ function createBear(){
 }
 
 /* =====================================================================
-   PLAYER STATE
+   PLAYER STATE — includes RAM (HORN) MECHANIC
    ===================================================================== */
 const player = {
   pos: SPAWN.clone(),
@@ -1566,10 +1631,28 @@ const player = {
   vy: 0,
   grounded: true,
   jumpHeldLast: false,
+  // RAM / HORN
+  charge: 100,          // 0..100, regenerates over time
+  charging: false,      // is the player actively charging forward
+  chargeTime: 0,        // how long the current ram has been going
+  chargeCooldown: 0,    // 0..1 — 1 means fully ready again
+  chargeCooldownMax: 1.6, // seconds to refill from 0 to 1
+  ramDirection: new THREE.Vector3(0, 0, 1),
+  ramPushTimer: 0,
+  chargeBtnHeld: false,
+  chargeKeyHeldLast: false,
+  headPitch: 0,
+  stunTimer: 0,
 };
 
 const GRAVITY = -22.0;
 const JUMP_VELOCITY = 7.0;
+const RAM_COST = 45;            // charge cost per ram
+const RAM_DURATION = 0.55;      // seconds of forward sprint
+const RAM_SPEED = 13.5;         // forward rush speed
+const RAM_PUSH_RADIUS = 1.8;    // impact radius
+const RAM_STUN_TIME = 3.2;      // how long a bear stays stunned
+const RAM_RECOVER_RATE = 22;    // charge regen per second
 
 const cow = createCow();
 cow.group.position.copy(player.pos);
@@ -1577,7 +1660,7 @@ cow.group.rotation.y = player.yaw;
 scene.add(cow.group);
 
 /* =====================================================================
-   JUMP BUTTON HANDLER
+   JUMP BUTTON
    ===================================================================== */
 const jumpBtn = document.getElementById('jumpBtn');
 let jumpBtnHeld = false;
@@ -1588,17 +1671,50 @@ function pulseJumpBtn(){
   clearTimeout(jumpBtnPulseTimer);
   jumpBtnPulseTimer = setTimeout(() => jumpBtn.classList.remove('pressed'), 130);
 }
-
 jumpBtn.addEventListener('pointerdown', (e) => {
-  e.preventDefault();
-  jumpBtnHeld = true;
-  pulseJumpBtn();
+  e.preventDefault(); jumpBtnHeld = true; pulseJumpBtn();
 });
 jumpBtn.addEventListener('pointerup', () => { jumpBtnHeld = false; });
 jumpBtn.addEventListener('pointerleave', () => { jumpBtnHeld = false; });
 jumpBtn.addEventListener('pointercancel', () => { jumpBtnHeld = false; });
-// Prevent context menu on long-press (mobile)
 jumpBtn.addEventListener('contextmenu', e => e.preventDefault());
+
+/* =====================================================================
+   CHARGE (HORN) BUTTON
+   ===================================================================== */
+const chargeBtn = document.getElementById('chargeBtn');
+function pulseChargeBtn(){
+  chargeBtn.classList.add('pressed');
+  setTimeout(() => chargeBtn.classList.remove('pressed'), 130);
+}
+chargeBtn.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  player.chargeBtnHeld = true;
+  pulseChargeBtn();
+  tryRam();
+});
+chargeBtn.addEventListener('pointerup', () => { player.chargeBtnHeld = false; });
+chargeBtn.addEventListener('pointerleave', () => { player.chargeBtnHeld = false; });
+chargeBtn.addEventListener('pointercancel', () => { player.chargeBtnHeld = false; });
+chargeBtn.addEventListener('contextmenu', e => e.preventDefault());
+
+function tryRam(){
+  if (!player.alive) return;
+  if (player.charging) return;
+  if (player.charge < RAM_COST) return;
+  if (player.stunTimer > 0) return;
+
+  // Lock direction at the moment of ram
+  player.ramDirection.set(Math.sin(player.yaw), 0, Math.cos(player.yaw)).normalize();
+  player.charging = true;
+  player.chargeTime = 0;
+  player.charge -= RAM_COST;
+  player.ramPushTimer = 0;
+  player.stunTimer = 0;
+
+  // Small screen feedback
+  showToast('HORN CHARGE!', 'gold');
+}
 
 /* =====================================================================
    GAME MODE + MULTIPLAYER STATE
@@ -1643,6 +1759,8 @@ function createHunter(startPos, startRot){
       shootCooldown: 0,
       viewRange: 40,
       fov: 82,
+      stunned: 0,
+      stunSpin: 0,
     }
   };
 }
@@ -1839,6 +1957,10 @@ window.addEventListener('keydown', e => {
   keys[e.code] = true;
   if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
   if (e.code === 'Space' && gameState === 'playing') pulseJumpBtn();
+  if ((e.code === 'KeyE') && gameState === 'playing'){
+    pulseChargeBtn();
+    tryRam();
+  }
   if (e.code === 'Escape'){
     if (settingsOpen) closeSettings();
     else if (multiOpen) closeMultiMenu();
@@ -1877,6 +1999,7 @@ const ui = {
   detectState: document.getElementById('detectState'),
   hpFill: document.getElementById('hpFill'),
   stFill: document.getElementById('stFill'),
+  sdFill: document.getElementById('sdFill'),
   hiddenTag: document.getElementById('hiddenTag'),
   objSub: document.getElementById('objSub'),
   objMain: document.getElementById('objMain'),
@@ -1892,6 +2015,9 @@ const ui = {
   cowCountNum: document.getElementById('cowCountNum'),
   toast: document.getElementById('toast'),
   jumpBtn: jumpBtn,
+  chargeBtn: chargeBtn,
+  chargeWrap: document.getElementById('chargeWrap'),
+  chargeFill: document.getElementById('chargeFill'),
 };
 
 let toastTimer = null;
@@ -1953,6 +2079,15 @@ function resetPlayer(){
   player.vy = 0;
   player.grounded = true;
   player.jumpHeldLast = false;
+  player.charge = 100;
+  player.charging = false;
+  player.chargeTime = 0;
+  player.chargeCooldown = 0;
+  player.ramPushTimer = 0;
+  player.chargeBtnHeld = false;
+  player.chargeKeyHeldLast = false;
+  player.headPitch = 0;
+  player.stunTimer = 0;
   cow.group.position.copy(player.pos);
   cow.group.rotation.y = player.yaw;
   cow.group.visible = true;
@@ -2041,14 +2176,29 @@ document.getElementById('startMulti').addEventListener('click', () => {
 });
 
 /* =====================================================================
-   PLAYER UPDATE — with jump physics
+   PLAYER UPDATE — includes jump + ram
    ===================================================================== */
 function updatePlayer(dt, t){
   if (!player.alive) return;
 
+  // Charge regen
+  player.charge = Math.min(100, player.charge + RAM_RECOVER_RATE * dt);
+
+  // Cooldown for ram button dim
+  if (player.chargeCooldown > 0){
+    player.chargeCooldown = Math.max(0, player.chargeCooldown - dt / player.chargeCooldownMax);
+  }
+
+  // Stun recovery (if player somehow gets stunned - reserved)
+  if (player.stunTimer > 0) player.stunTimer -= dt;
+
   const wantCrouch = !!(keys['ControlLeft'] || keys['ControlRight'] || keys['KeyC']);
   player.crouching = wantCrouch;
   player.crouchT = THREE.MathUtils.damp(player.crouchT, wantCrouch ? 1 : 0, 9, dt);
+
+  // Head pitch for ram look
+  const targetHeadPitch = player.charging ? 0.4 : 0;
+  player.headPitch = THREE.MathUtils.damp(player.headPitch, targetHeadPitch, 12, dt);
 
   const fwd = new THREE.Vector3(-Math.sin(cam.yaw), 0, -Math.cos(cam.yaw));
   const right = new THREE.Vector3(Math.cos(cam.yaw), 0, -Math.sin(cam.yaw));
@@ -2065,7 +2215,7 @@ function updatePlayer(dt, t){
   const moving = move.lengthSq() > 0.0001;
   if (moving) move.normalize();
 
-  const wantSprint = (keys['ShiftLeft'] || keys['ShiftRight']) && f > 0 && !wantCrouch && player.stamina > 0.5;
+  const wantSprint = (keys['ShiftLeft'] || keys['ShiftRight']) && f > 0 && !wantCrouch && player.stamina > 0.5 && !player.charging;
   let speed = wantCrouch ? 2.35 : 4.7;
   if (wantSprint) speed = 8.4;
 
@@ -2078,14 +2228,13 @@ function updatePlayer(dt, t){
   // ---- JUMP ----
   const jumpInput = (keys['Space'] || jumpBtnHeld);
   const jumpEdge = jumpInput && !player.jumpHeldLast;
-  if (jumpEdge && player.grounded && !wantCrouch){
+  if (jumpEdge && player.grounded && !wantCrouch && !player.charging){
     player.vy = JUMP_VELOCITY;
     player.grounded = false;
     pulseJumpBtn();
   }
   player.jumpHeldLast = jumpInput;
 
-  // Gravity
   if (!player.grounded || player.pos.y > 0){
     player.vy += GRAVITY * dt;
     player.pos.y += player.vy * dt;
@@ -2096,11 +2245,60 @@ function updatePlayer(dt, t){
     }
   }
 
-  if (moving){
-    player.pos.addScaledVector(move, speed * dt);
+  // ---- RAM (HORN) ----
+  if (player.charging){
+    player.chargeTime += dt;
+
+    // Face the ram direction
+    const ramYaw = Math.atan2(player.ramDirection.x, player.ramDirection.z);
+    player.yaw = angleLerp(player.yaw, ramYaw, 1 - Math.pow(0.000001, dt));
+
+    // Move fast forward
+    const step = RAM_SPEED * dt;
+    player.pos.x += player.ramDirection.x * step;
+    player.pos.z += player.ramDirection.z * step;
     resolveCollisions(player.pos, 0.85);
-    const targetYaw = Math.atan2(move.x, move.z);
-    player.yaw = angleLerp(player.yaw, targetYaw, 1 - Math.pow(0.0008, dt));
+
+    // Hit any hunter within radius
+    player.ramPushTimer -= dt;
+    if (player.ramPushTimer <= 0){
+      player.ramPushTimer = 0.08;
+      for (const h of hunters){
+        if (h.data.stunned > 0) continue;
+        const dx = h.bear.group.position.x - player.pos.x;
+        const dz = h.bear.group.position.z - player.pos.z;
+        if (dx*dx + dz*dz < RAM_PUSH_RADIUS * RAM_PUSH_RADIUS){
+          // Apply hit!
+          h.data.stunned = RAM_STUN_TIME;
+          h.data.detect = 0;
+          h.data.state = 'patrol';
+          h.data.searchTimer = 0;
+          h.data.stunSpin = 0;
+          // Knockback bear
+          const len = Math.hypot(dx, dz) || 1;
+          const nx = -dx / len, nz = -dz / len;
+          h.bear.group.position.x += nx * 1.8;
+          h.bear.group.position.z += nz * 1.8;
+          resolveCollisions(h.bear.group.position, 1.05);
+          showToast('HORN HIT! Hunter stunned', 'good');
+        }
+      }
+    }
+
+    if (player.chargeTime >= RAM_DURATION){
+      player.charging = false;
+      player.chargeTime = 0;
+      // Brief cooldown flash on button
+      player.chargeCooldown = 1;
+    }
+  } else {
+    // Normal movement
+    if (moving){
+      player.pos.addScaledVector(move, speed * dt);
+      resolveCollisions(player.pos, 0.85);
+      const targetYaw = Math.atan2(move.x, move.z);
+      player.yaw = angleLerp(player.yaw, targetYaw, 1 - Math.pow(0.0008, dt));
+    }
   }
 
   player.inBush = false;
@@ -2109,9 +2307,21 @@ function updatePlayer(dt, t){
     if (dx*dx + dz*dz < b.r*b.r){ player.inBush = true; break; }
   }
 
+  // During ram, cancel bush concealment
+  if (player.charging) player.inBush = false;
+
   cow.group.position.copy(player.pos);
   cow.group.rotation.y = player.yaw;
-  cow.update(dt, moving ? speed : 0, player.crouchT, t, player.pos.y, player.vy);
+  cow.update(
+    dt,
+    player.charging ? RAM_SPEED : (moving ? speed : 0),
+    player.crouchT,
+    t,
+    player.pos.y,
+    player.vy,
+    player.headPitch,
+    player.charging ? 1 : 0
+  );
 
   if (Math.hypot(player.pos.x - EXIT.x, player.pos.z - EXIT.z) < 4.0){
     endGame(true);
@@ -2127,6 +2337,7 @@ function updateAICow(ai, dt, t){
   let nearest = null;
   let nearestDist = Infinity;
   for (const h of hunters){
+    if (h.data.stunned > 0) continue;
     const d = Math.hypot(ai.pos.x - h.bear.group.position.x, ai.pos.z - h.bear.group.position.z);
     if (d < nearestDist){ nearestDist = d; nearest = h; }
   }
@@ -2176,7 +2387,7 @@ function updateAICow(ai, dt, t){
 
   ai.cow.group.position.copy(ai.pos);
   ai.cow.group.rotation.y = ai.yaw;
-  ai.cow.update(dt, ai.state === 'flee' ? 5.0 : 2.0, ai.crouchT, t, 0, 0);
+  ai.cow.update(dt, ai.state === 'flee' ? 5.0 : 2.0, ai.crouchT, t, 0, 0, 0, 0);
 }
 
 /* =====================================================================
@@ -2185,6 +2396,23 @@ function updateAICow(ai, dt, t){
 function updateHunterAI(hunterObj, dt, t){
   const h = hunterObj.data;
   const bear = hunterObj.bear;
+
+  // ---- Stunned: spin and shake ----
+  if (h.stunned > 0){
+    h.stunned -= dt;
+    h.stunSpin += dt * 9;
+    bear.group.rotation.y += dt * 9;
+    bear.group.position.y = Math.sin(h.stunSpin * 2) * 0.12;
+    bear.update(dt, 0, t);
+    if (h.stunned <= 0){
+      h.stunned = 0;
+      bear.group.position.y = 0;
+      h.state = 'patrol';
+      h.detect = 0;
+    }
+    return;
+  }
+
   const hx = bear.group.position.x;
   const hz = bear.group.position.z;
 
@@ -2317,7 +2545,7 @@ function updateHunterAI(hunterObj, dt, t){
 }
 
 /* =====================================================================
-   SHOOTING — accounts for target's jump height
+   SHOOTING
    ===================================================================== */
 function shootAtTarget(hunterObj, targetPos, targetCrouchT){
   const bear = hunterObj.bear;
@@ -2325,7 +2553,6 @@ function shootAtTarget(hunterObj, targetPos, targetCrouchT){
   bear.muzzle.getWorldPosition(origin);
 
   const target = targetPos.clone();
-  // targetPos.y is the jump offset (0 for AI cows, jumpY for player)
   target.y = targetPos.y + 1.05 - targetCrouchT * 0.35;
 
   const dir = target.sub(origin).normalize();
@@ -2355,7 +2582,6 @@ function updateProjectiles(dt){
     const newPos = b.mesh.position;
     let dead = b.life <= 0;
 
-    // Player hit — includes jump height
     if (!dead && player.alive){
       const center = new THREE.Vector3(
         player.pos.x,
@@ -2368,7 +2594,6 @@ function updateProjectiles(dt){
       }
     }
 
-    // AI cow hit
     if (!dead){
       for (const ai of aiCows){
         if (!ai.alive) continue;
@@ -2419,7 +2644,7 @@ function damagePlayer(amount){
 }
 
 /* =====================================================================
-   CAMERA UPDATE — follows jump height
+   CAMERA UPDATE
    ===================================================================== */
 function updateCamera(dt){
   const cp = Math.cos(cam.pitch);
@@ -2470,6 +2695,7 @@ function updateCompass(){
   let nearest = null;
   let nearestDist = Infinity;
   for (const h of hunters){
+    if (h.data.stunned > 0) continue;
     const dx = h.bear.group.position.x - player.pos.x;
     const dz = h.bear.group.position.z - player.pos.z;
     const d = Math.hypot(dx, dz);
@@ -2498,10 +2724,12 @@ function updateHUD(dt){
   let maxDetect = 0;
   let anyChasing = false;
   let anySearching = false;
+  let anyStunned = false;
   for (const h of hunters){
     if (h.data.detect > maxDetect) maxDetect = h.data.detect;
     if (h.data.state === 'chase') anyChasing = true;
     else if (h.data.state === 'search') anySearching = true;
+    if (h.data.stunned > 0) anyStunned = true;
   }
 
   ui.detectFill.style.width = (maxDetect * 100).toFixed(1) + '%';
@@ -2515,17 +2743,19 @@ function updateHUD(dt){
 
   if (anyChasing)      { color = '#ff4a3a'; label = 'ON YOUR TRAIL'; }
   else if (anySearching){ color = '#ff8a3a'; label = 'SEARCHING'; }
+  if (anyStunned)      { color = '#ffb547'; label = 'STUNNED'; }
 
   ui.detectFill.style.background = color;
   ui.detectFill.style.color = color;
   ui.detectState.textContent = label;
   ui.detectState.style.color = color;
-  ui.detectWrap.classList.toggle('on', maxDetect > 0.02 || anyChasing || anySearching);
+  ui.detectWrap.classList.toggle('on', maxDetect > 0.02 || anyChasing || anySearching || anyStunned);
 
   ui.hpFill.style.width = clamp(player.health, 0, 100) + '%';
   ui.stFill.style.width = clamp(player.stamina, 0, 100) + '%';
+  ui.sdFill.style.width = clamp(player.charge, 0, 100) + '%';
 
-  const concealed = player.inBush && player.crouchT > 0.45 && player.pos.y < 0.2;
+  const concealed = player.inBush && player.crouchT > 0.45 && player.pos.y < 0.2 && !player.charging;
   ui.hiddenTag.classList.toggle('on', concealed);
 
   const distToExit = Math.hypot(player.pos.x - EXIT.x, player.pos.z - EXIT.z);
@@ -2537,8 +2767,14 @@ function updateHUD(dt){
     ui.objSub.textContent = 'GATE — ' + Math.round(distToExit) + ' M';
   }
 
-  // Jump button visibility
+  // Show / hide jump + charge buttons
   ui.jumpBtn.classList.toggle('on', gameState === 'playing' && player.alive);
+  ui.chargeBtn.classList.toggle('on', gameState === 'playing' && player.alive);
+  ui.chargeBtn.classList.toggle('cooling', player.charge < RAM_COST || player.charging);
+
+  // Charge bar visible while ramming
+  ui.chargeWrap.classList.toggle('on', player.charging);
+  ui.chargeFill.style.width = (player.chargeTime / RAM_DURATION * 100).toFixed(0) + '%';
 }
 
 /* =====================================================================
@@ -2660,18 +2896,15 @@ function closeSettings(){
 
 document.getElementById('settingsBtn').addEventListener('click', openSettings);
 document.getElementById('settingsClose').addEventListener('click', closeSettings);
-
 document.querySelectorAll('.presetBtn').forEach(btn => {
   btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
 });
-
 document.getElementById('settingsReset').addEventListener('click', () => {
   settings = Object.assign({}, DEFAULT_SETTINGS);
   syncSettingsUI();
   applySettings();
   saveSettings();
 });
-
 document.getElementById('sResolution').addEventListener('input', e => {
   settings.resolutionScale = parseInt(e.target.value) / 100;
   document.getElementById('vResolution').textContent = e.target.value + '%';
@@ -2748,15 +2981,19 @@ function animate(){
     updateCompass();
   } else if (gameState === 'menu'){
     updateMenuCamera(t);
-    cow.update(dt, 0, 0, t, 0, 0);
+    cow.update(dt, 0, 0, t, 0, 0, 0, 0);
     ui.compass.classList.remove('on');
     ui.jumpBtn.classList.remove('on');
+    ui.chargeBtn.classList.remove('on');
+    ui.chargeWrap.classList.remove('on');
   } else {
     updateProjectiles(dt);
     updateCamera(dt);
     for (const h of hunters) h.bear.update(dt, 0, t);
     updateCompass();
     ui.jumpBtn.classList.remove('on');
+    ui.chargeBtn.classList.remove('on');
+    ui.chargeWrap.classList.remove('on');
   }
 
   updateSun();
